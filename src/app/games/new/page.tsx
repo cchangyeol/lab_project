@@ -44,19 +44,24 @@ export default function NewGamePage() {
         required
       />
 
-      <input
-        type="date"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-        required
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        시작일
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          required
+        />
+      </label>
 
-      <input
-        type="date"
-        value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
-        required
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        마지막으로 플레이한 날 (선택)
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)} // 입력 안 하면 빈 문자열 그대로 둠
+        />
+      </label>
 
       <input
         type="number"
