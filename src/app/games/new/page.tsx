@@ -3,9 +3,12 @@
 'use client'; // 클라이언트 컴포넌트로 만들어서 브라우저에서 동작하게 함
 
 import { useState } from 'react'; // 입력값을 상태로 관리하기 위해 useState 훅 가져옴
+import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화면으로 이동
 import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져옴
 
 export default function NewGamePage() {
+  const router = useRouter(); // 저장 성공하면 목록으로 보내는데 씀
+
   // 폼에 입력한 값들을 저장해두는 state
   const [title, setTitle] = useState(''); // 게임제목
   const [platform, setPlatform] = useState(''); // 플렛폼
@@ -17,11 +20,21 @@ export default function NewGamePage() {
   const [trailerUrl, setTrailerUrl] = useState(''); // 게임 트레일러 URL
 
   // 저장 버튼을 눌렀을 때 실행되는 함수
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
 
-    // 아직 저장 API가 없어서 일단 값만 확인
-    console.log({ title, platform, startDate, playTime, endDate, rating, status, trailerUrl });
+    // 입력한 값들을 /api/games로 보냄
+    const res = await fetch('/api/games', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, platform, startDate, playTime, endDate, rating, status, trailerUrl }), // 입력값들을 JSON으로 변환해서 보냄
+    });
+
+    if (res.ok) {
+      router.push('/'); // 저장 성공하면 목록 화면으로 이동
+    } else {
+      console.error('게임 기록 저장 실패'); // 실패하면 에러 메시지 출력
+    }
   }
 
   return (
