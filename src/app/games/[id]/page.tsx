@@ -5,6 +5,7 @@ import clientPromise from '@/lib/mongodb'; // MongoDB 연결
 import type { Game } from '@/types/game'; // 게임 기록 타입
 import DeleteGameButton from '@/components/DeleteGameButton'; // 삭제 버튼
 import Link from 'next/link';
+import BackButton from '@/components/BackButton';
 
 // 트레일러 링크에서 유튜브 영상 id만 뽑아내는 함수
 function getYoutubeId(url: string): string | null {
@@ -43,6 +44,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
 
   return (
     <main className="p-8 max-w-md flex flex-col gap-2">
+      <BackButton />
       <h1 className="text-xl font-bold">{game.title}</h1>
       <p>플랫폼: {game.platform}</p>
       <p>상태: {game.status}</p>

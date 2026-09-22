@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Game, GameStatus } from '@/types/game';
+import BackButton from '@/components/BackButton';
 
 // 부모(수정 페이지)가 DB에서 가져온 기존 기록을 game이라는 prop으로 넘겨줌
 export default function EditGameForm({ game }: { game: Game }) {
@@ -50,6 +51,8 @@ export default function EditGameForm({ game }: { game: Game }) {
 
     return (
       <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-4 max-w-md">
+        <BackButton />
+
         <h1 className="text-xl font-bold">게임 기록 수정</h1>
           <label className="flex flex-col gap-1 text-sm">
           게임명

@@ -5,6 +5,7 @@
 import { useState } from 'react'; // 입력값을 상태로 관리하기 위해 useState 훅 가져옴
 import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화면으로 이동
 import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져옴
+import BackButton from '@/components/BackButton';
 
 export default function NewGamePage() {
   const router = useRouter(); // 저장 성공하면 목록으로 보내는데 씀
@@ -51,6 +52,8 @@ export default function NewGamePage() {
 
   return (
     <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-4 max-w-md">
+      <BackButton />
+
       <h1 className="text-xl font-bold">게임 기록 등록</h1>
 
       <label className="flex flex-col gap-1 text-sm">
