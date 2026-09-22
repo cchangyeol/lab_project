@@ -88,8 +88,8 @@ export default function NewGamePage() {
           type="number"
           placeholder="총 플레이 시간 (시간 단위)"
           min={0}
-          value={playTime}
-          onChange={(e) => setPlayTime(Math.max(0, Number(e.target.value)))} // 문자로 들어오는 값을 숫자로 바꿔줌 + 0보다 작은 값이 들어오면 0으로 고정
+          value={playTime === 0? '' : playTime} // 0일 땐 빈칸, 아니면 그대로 보여줌
+          onChange={(e) => setPlayTime(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))} // 문자로 들어오는 값을 숫자로 바꿔줌 + 0보다 작은 값이 들어오면 0으로 고정
           required
         />
       </label>
@@ -101,8 +101,8 @@ export default function NewGamePage() {
           placeholder="게임 평점 (1~5)"
           min={1}
           max={5}
-          value={rating}
-          onChange={(e) => setRating(Number(e.target.value))}
+          value={rating === 0 ? '' : rating}
+          onChange={(e) => setRating(e.target.value === '' ? 0 : Number(e.target.value))} // 지우면 0으로, 입력하면 숫자로 표시
           required
         />
       </label>
