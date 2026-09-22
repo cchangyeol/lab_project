@@ -41,21 +41,27 @@ export default function NewGamePage() {
     <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-4 max-w-md">
       <h1 className="text-xl font-bold">게임 기록 등록</h1>
 
-      <input
-        type="text"
-        placeholder="게임 제목"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)} // 입력할 때 마다 title state 업데이트
-        required // 비어있으면 제출 안 되게 함
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        게임명
+        <input
+          type="text"
+          placeholder="게임 제목"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)} // 입력할 때 마다 title state 업데이트
+          required // 비어있으면 제출 안 되게 함
+        />
+      </label>
 
-      <input
-        type="text"
-        placeholder="플랫폼 (예: PC, PS5, 닌텐도 Switch)"
-        value={platform}
-        onChange={(e) => setPlatform(e.target.value)}
-        required
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        게임 플랫폼
+        <input
+          type="text"
+          placeholder="플랫폼 (예: PC, PS5, 닌텐도 Switch)"
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+          required
+        />
+      </label>
 
       <label className="flex flex-col gap-1 text-sm">
         시작일
@@ -76,40 +82,53 @@ export default function NewGamePage() {
         />
       </label>
 
-      <input
-        type="number"
-        placeholder="총 플레이 시간 (시간 단위)"
-        value={playTime}
-        onChange={(e) => setPlayTime(Number(e.target.value))} // 문자로 들어오는 값을 숫자로 바꿔줌
-        required
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        플레이 시간 (시간 단위)
+        <input
+          type="number"
+          placeholder="총 플레이 시간 (시간 단위)"
+          min={0}
+          value={playTime}
+          onChange={(e) => setPlayTime(Math.max(0, Number(e.target.value)))} // 문자로 들어오는 값을 숫자로 바꿔줌 + 0보다 작은 값이 들어오면 0으로 고정
+          required
+        />
+      </label>
 
-      <input
-        type="number"
-        placeholder="게임 평점 (1~5)"
-        min={1}
-        max={5}
-        value={rating}
-        onChange={(e) => setRating(Number(e.target.value))}
-        required
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        평점 (1점 ~ 5점)
+        <input
+          type="number"
+          placeholder="게임 평점 (1~5)"
+          min={1}
+          max={5}
+          value={rating}
+          onChange={(e) => setRating(Number(e.target.value))}
+          required
+        />
+      </label>
 
-      <select
-        value={status}
-        onChange={(e) => setStatus(e.target.value as GameStatus)} // select 값을 GameStatus 타입으로 취급
-      >
-        <option value="하고싶음">하고싶음</option>
-        <option value="하는중">하는중</option>
-        <option value="클리어">클리어</option>
-        <option value="중단">중단</option>
-      </select>
+      <label className="flex flex-col gap-1 text-sm">
+        상태
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as GameStatus)} // select 값을 GameStatus 타입으로 취급
+        >
+          <option value="하고싶음">하고싶음</option>
+          <option value="하는중">하는중</option>
+          <option value="클리어">클리어</option>
+          <option value="중단">중단</option>
+        </select>
+      </label>
 
-      <input
-        type="url"
-        placeholder="게임 트레일러 URL"
-        value={trailerUrl}
-        onChange={(e) => setTrailerUrl(e.target.value)}
-      />
+      <label className="flex flex-col gap-1 text-sm">
+        트레일러 유튜브 링크 (선택)
+        <input
+          type="url"
+          placeholder="게임 트레일러 URL"
+          value={trailerUrl}
+          onChange={(e) => setTrailerUrl(e.target.value)}
+        />
+      </label>
 
       <button type="submit">등록</button>
     </form>
