@@ -14,7 +14,7 @@ export default function NewGamePage() {
   const [platform, setPlatform] = useState(''); // 플렛폼
   const [startDate, setStartDate] = useState(''); // 시작일
   const [endDate, setEndDate] = useState(''); // 종료일
-  const [playTime, setPlayTime] = useState(0); // 총 플레이 시간
+  const [playTime, setPlayTime] = useState(''); // 총 플레이 시간
   const [rating, setRating] = useState(0); // 게임 평점
   const [status, setStatus] = useState<GameStatus>('하고싶음'); // 게임 상태, 기본값은 '하고싶음'
   const [trailerUrl, setTrailerUrl] = useState(''); // 게임 트레일러 URL
@@ -22,6 +22,18 @@ export default function NewGamePage() {
   // 저장 버튼을 눌렀을 때 실행되는 함수
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
+
+    // 마지막 플레이한 날이 시작일보다 빠르면 저장하지 않고 알림만 띄움
+    if (endDate && endDate < startDate) {
+      alert('적절한 날짜를 선택해주세요.');
+      return;
+    }
+
+    // 플레이 시간이나 평점이 숫자가 아니면 저장하지 않고 알림만 띄움
+    if (Number.isNaN(playTime) || Number.isNaN(rating)) {
+      alert('숫자 외엔 입력할 수 없습니다.');
+      return;
+    }
 
     // 입력한 값들을 /api/games로 보냄
     const res = await fetch('/api/games', {
@@ -77,6 +89,7 @@ export default function NewGamePage() {
         마지막으로 플레이한 날 (선택)
         <input
           type="date"
+          min={startDate} // 시작일보다 이른 날짜는 달력에서 선택 불가
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)} // 입력 안 하면 빈 문자열 그대로 둠
         />
@@ -88,8 +101,8 @@ export default function NewGamePage() {
           type="number"
           placeholder="총 플레이 시간 (시간 단위)"
           min={0}
-          value={playTime === 0? '' : playTime} // 0일 땐 빈칸, 아니면 그대로 보여줌
-          onChange={(e) => setPlayTime(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))} // 문자로 들어오는 값을 숫자로 바꿔줌 + 0보다 작은 값이 들어오면 0으로 고정
+          value={playTime}
+          onChange={(e) => setPlayTime(e.target.value)}
           required
         />
       </label>
@@ -102,7 +115,10 @@ export default function NewGamePage() {
           min={1}
           max={5}
           value={rating === 0 ? '' : rating}
-          onChange={(e) => setRating(e.target.value === '' ? 0 : Number(e.target.value))} // 지우면 0으로, 입력하면 숫자로 표시
+          onChange={(e) => {
+            const value = e.target.value;
+            setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
+          }}
           required
         />
       </label>
