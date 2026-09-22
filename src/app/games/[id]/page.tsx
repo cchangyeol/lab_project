@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'; // MongoDB에서 문서를 id로 찾을 때 
 import { notFound } from 'next/navigation'; // id에 해당하는 기록이 없을 때 404 화면 보여주기
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
 import type { Game } from '@/types/game'; // 게임 기록 타입
+import DeleteGameButton from '@/components/DeleteGameButton'; // 삭제 버튼
 
 // 트레일러 링크에서 유튜브 영상 id만 뽑아내는 함수
 function getYoutubeId(url: string): string | null {
@@ -57,6 +58,8 @@ export default async function GameDetailPage({ params }: { params: { id: string 
           allowFullScreen
         />
       )}
+
+      <DeleteGameButton gameId={game._id!} /> {/* game._id는 항상 있는 값이라 !로 단언 */}
     </main>
   );
 }
