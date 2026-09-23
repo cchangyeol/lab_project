@@ -7,6 +7,14 @@ import DeleteGameButton from '@/components/DeleteGameButton'; // 삭제 버튼
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 
+// 목록 화면과 같은 상태 배지 색 (파일이 달라서 똑같이 한 번 더 정의)
+const STATUS_STYLES: Record<GameStatus, string> = {
+  하고싶음: 'bg-sky-100 text-sky-700',
+  하는중: 'bg-amber-100 text-amber-700',
+  클리어: 'bg-emerald-100 text-emerald-700',
+  중단: 'bg-rose-100 text-rose-700',
+};
+
 // 트레일러 링크에서 유튜브 영상 id만 뽑아내는 함수
 function getYoutubeId(url: string): string | null {
   try {
@@ -40,32 +48,72 @@ export default async function GameDetailPage({ params }: { params: { id: string 
     notFound(); // 못 찾으면 Next.js 기본 404 화면을 보여준다
   }
 
-  const youtubeId = game.trailerUrl ?getYoutubeId(game.trailerUrl) : null;
+  const youtubeId = game.trailerUrl ? getYoutubeId(game.trailerUrl) : null;
 
   return (
-    <main className="p-8 max-w-md flex flex-col gap-2">
-      <BackButton />
-      <h1 className="text-xl font-bold">{game.title}</h1>
-      <p>플랫폼: {game.platform}</p>
-      <p>장르: {game.genre}</p>
-      <p>상태: {game.status}</p>
-      <p>시작일: {game.startDate}</p>
-      {game.endDate && <p>마지막 플레이: {game.endDate}</p>}
-      <p>플레이 시간: {game.playTime}시간</p>
-      <p>평점: {game.rating} / 5</p>
+    <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
+      <div className="w-full max-w-md">
+        <BackButton />
 
-      {youtubeId && (
-        <iframe
-          className="mt-4 w-full aspect-video"
-          src={`https://www.youtube.com/embed/${youtubeId}`}
-          title="트레일러"
-          allowFullScreen
-        />
-      )}
+        {/* 콘솔 몸체: 두꺼운 테두리 + 안쪽에 밝은 화면부 (검정 대신 하늘색으로) */}
+        <div className="rounded-3xl border-4 border-stone-200 bg-white p-1.5 shadow-md">
+          <div className="rounded-2xl bg-sky-50 p-6 flex flex-col gap-3">
+            {/* 전원 표시등 - 카트리지가 꽂혀서 켜졌다는 느낌 */}
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs text-stone-400 tracking-wide">POWER ON</span>
+            </div>
 
-      <Link href={`/games/${game._id}/edit`} className='underline mt-4'>수정</Link>
+            <h1 className="text-xl font-bold text-stone-800">{game.title}</h1>
 
-      <DeleteGameButton gameId={game._id!} /> {/* game._id는 항상 있는 값이라 !로 단언 */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.platform}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.genre}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
+            </div>
+
+            <dl className="text-sm text-stone-600 flex flex-col gap-1 mt-1">
+              <div className="flex justify-between">
+                <dt>시작일</dt>
+                <dd>{game.startDate}</dd>
+              </div>
+              {game.endDate && (
+                <div className="flex justify-between">
+                  <dt>마지막 플레이</dt>
+                  <dd>{game.endDate}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt>플레이 시간</dt>
+                <dd>{game.playTime}시간</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>평점</dt>
+                <dd>{game.rating} / 5</dd>
+              </div>
+            </dl>
+
+            {youtubeId && (
+              <iframe
+                className="mt-2 w-full aspect-video rounded-xl"
+                src={`https://www.youtube.com/embed/${youtubeId}`}
+                title="트레일러"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <Link
+            href={`/games/${game._id}/edit`}
+            className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition"
+          >
+            수정
+          </Link>
+          <DeleteGameButton gameId={game._id!} />
+        </div>
+      </div>
     </main>
   );
 }

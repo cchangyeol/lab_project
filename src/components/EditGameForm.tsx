@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import type { Game, GameStatus } from '@/types/game';
 import BackButton from '@/components/BackButton';
 
+// 입력칸에 공통으로 쓰는 스타일 (반복되는 클래스라 변수로 빼둠)
+const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200';
+
 // 부모(수정 페이지)가 DB에서 가져온 기존 기록을 game이라는 prop으로 넘겨줌
 export default function EditGameForm({ game }: { game: Game }) {
     const router = useRouter();
@@ -40,7 +43,7 @@ export default function EditGameForm({ game }: { game: Game }) {
       const res = await fetch(`/api/games/${game._id}`, {
         method: 'PUT', // 새로 만드는 게 아닌 기존 문서를 바꾸는거라 POST 대신 PUT
         headers: { 'Content-Type': 'application/json' },
-        body : JSON.stringify({ title, platform, genre, startDate, endDate, playTime, rating, status, trailerUrl }),
+        body: JSON.stringify({ title, platform, genre, startDate, endDate, playTime, rating, status, trailerUrl }),
       });
 
       if (res.ok) {
@@ -52,115 +55,80 @@ export default function EditGameForm({ game }: { game: Game }) {
     }
 
     return (
-      <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-4 max-w-md">
+      <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
+      <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
         <BackButton />
 
-        <h1 className="text-xl font-bold">게임 기록 수정</h1>
-          <label className="flex flex-col gap-1 text-sm">
-          게임명
-          <input
-            type="text"
-            placeholder="게임 제목"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)} // 입력할 때 마다 title state 업데이트
-            required // 비어있으면 제출 안 되게 함
-          />
-        </label>
+        {/* 등록 폼과 같은 흰 카드 스타일 */}
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-stone-800">게임 기록 수정</h1>
 
-        <label className="flex flex-col gap-1 text-sm">
-          게임 플랫폼
-          <input
-            type="text"
-            placeholder="플랫폼 (예: PC, PS5, 닌텐도 Switch)"
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            게임명
+            <input type="text" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} required />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          장르
-          <input
-            type="text"
-            placeholder="예: RPG, 액션, 퍼즐"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            플랫폼
+            <input type="text" className={inputClass} value={platform} onChange={(e) => setPlatform(e.target.value)} required />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          시작일
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            장르
+            <input type="text" className={inputClass} value={genre} onChange={(e) => setGenre(e.target.value)} required />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          마지막으로 플레이한 날 (선택)
-          <input
-            type="date"
-            min={endDate}
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)} // 입력 안 하면 빈 문자열 그대로 둠
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            시작일
+            <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          플레이 시간 (시간 단위)
-          <input
-            type="number"
-            placeholder="총 플레이 시간 (시간 단위)"
-            min={0}
-            value={playTime}
-            onChange={(e) => setPlayTime(e.target.value)}
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            마지막으로 플레이한 날 (선택)
+            <input type="date" className={inputClass} min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          평점 (1점 ~ 5점)
-          <input
-            type="number"
-            placeholder="게임 평점 (1~5)"
-            min={1}
-            max={5}
-            value={rating === 0 ? '' : rating}
-            onChange={(e) => {
-              const value = e.target.value;
-              setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
-            }} // 지우면 0으로, 입력하면 숫자로 표시
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            플레이 시간 (시간 단위)
+            <input type="number" min={0} className={inputClass} value={playTime} onChange={(e) => setPlayTime(e.target.value)} required />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          상태
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as GameStatus)} // select 값을 GameStatus 타입으로 취급
-          >
-            <option value="하고싶음">하고싶음</option>
-            <option value="하는중">하는중</option>
-            <option value="클리어">클리어</option>
-            <option value="중단">중단</option>
-          </select>
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            평점 (1점 ~ 5점)
+            <input
+              type="number"
+              min={1}
+              max={5}
+              className={inputClass}
+              value={rating === 0 ? '' : rating}
+              onChange={(e) => {
+                const value = e.target.value;
+                setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
+              }}
+              required
+            />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          트레일러 유튜브 링크 (선택)
-          <input
-            type="url"
-            placeholder="게임 트레일러 URL"
-            value={trailerUrl}
-            onChange={(e) => setTrailerUrl(e.target.value)}
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            상태
+            <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as GameStatus)}>
+              <option value="하고싶음">하고싶음</option>
+              <option value="하는중">하는중</option>
+              <option value="클리어">클리어</option>
+              <option value="중단">중단</option>
+            </select>
+          </label>
 
-        <button type="submit">수정 완료</button>
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            트레일러 유튜브 링크 (선택)
+            <input type="url" className={inputClass} value={trailerUrl} onChange={(e) => setTrailerUrl(e.target.value)} />
+          </label>
+
+          <button type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">
+            수정 완료
+          </button>
+        </div>
       </form>
-    )
+    </main>
+  );
 }

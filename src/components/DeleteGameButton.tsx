@@ -23,7 +23,9 @@ export default function DeleteGameButton({ gameId }: { gameId: string }) {
   }
 
   return (
-    <button onClick={handleDelete} className="text-red-600 underline mt-4">
+    <button
+    onClick={handleDelete}
+    className="bg-rose-200 hover:bg-rose-300 text-rose-900 rounded-full px-4 py-2 text-sm font-medium transition">
       삭제
     </button>
   );
