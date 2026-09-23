@@ -32,7 +32,7 @@ async function getGame(id: string): Promise<Game | null> {
   return { ...game, _id: game._id.toString() } as Game;
 }
 
-// 주소가 /games/abc123 이면 params.id 자리에 "abc123"이 들어온다
+// 주소가 /games/abc123 이면 params.id 자리에 "abc123"이 들어옴
 export default async function GameDetailPage({ params }: { params: { id: string }}) {
   const game = await getGame(params.id);
 
@@ -47,6 +47,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
       <BackButton />
       <h1 className="text-xl font-bold">{game.title}</h1>
       <p>플랫폼: {game.platform}</p>
+      <p>장르: {game.genre}</p>
       <p>상태: {game.status}</p>
       <p>시작일: {game.startDate}</p>
       {game.endDate && <p>마지막 플레이: {game.endDate}</p>}

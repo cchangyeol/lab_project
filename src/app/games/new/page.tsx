@@ -13,6 +13,7 @@ export default function NewGamePage() {
   // 폼에 입력한 값들을 저장해두는 state
   const [title, setTitle] = useState(''); // 게임제목
   const [platform, setPlatform] = useState(''); // 플렛폼
+  const [genre, setGenre] = useState('') // 장르
   const [startDate, setStartDate] = useState(''); // 시작일
   const [endDate, setEndDate] = useState(''); // 종료일
   const [playTime, setPlayTime] = useState(''); // 총 플레이 시간
@@ -40,7 +41,7 @@ export default function NewGamePage() {
     const res = await fetch('/api/games', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, platform, startDate, playTime, endDate, rating, status, trailerUrl }), // 입력값들을 JSON으로 변환해서 보냄
+      body: JSON.stringify({ title, platform, genre, startDate, playTime, endDate, rating, status, trailerUrl }), // 입력값들을 JSON으로 변환해서 보냄
     });
 
     if (res.ok) {
@@ -74,6 +75,17 @@ export default function NewGamePage() {
           placeholder="플랫폼 (예: PC, PS5, 닌텐도 Switch)"
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
+          required
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        장르
+        <input
+          type="text"
+          placeholder="예: RPG, 액션, 퍼즐"
+          value={genre}
+          onChange={(e) => setGenre(e.target.value)}
           required
         />
       </label>

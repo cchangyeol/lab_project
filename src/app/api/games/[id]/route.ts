@@ -27,6 +27,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       $set: {   // 이 필드들만 새 값으로 덮어씀
         title: body.title,
         platform: body.platform,
+        genre: body.genre,
         startDate: body.startDate,
         endDate: body.endDate,
         playTime: body.playTime,

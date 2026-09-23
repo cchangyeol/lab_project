@@ -13,6 +13,7 @@ export default function EditGameForm({ game }: { game: Game }) {
     // 빈 값이 아닌 기존 game 값으로 state를 초기화
     const [title, setTitle] = useState(game.title);
     const [platform, setPlatform] = useState(game.platform);
+    const [genre, setGenre] = useState(game.genre); // 장르
     const [startDate, setStartDate] = useState(game.startDate);
     const [endDate, setEndDate] = useState(game.endDate ?? '');
     const [playTime, setPlayTime] = useState(String(game.playTime));
@@ -38,7 +39,7 @@ export default function EditGameForm({ game }: { game: Game }) {
       const res = await fetch(`/api/games/${game._id}`, {
         method: 'PUT', // 새로 만드는 게 아닌 기존 문서를 바꾸는거라 POST 대신 PUT
         headers: { 'Content-Type': 'application/json' },
-        body : JSON.stringify({ title, platform, startDate, endDate, playTime, rating, status, trailerUrl }),
+        body : JSON.stringify({ title, platform, genre, startDate, endDate, playTime, rating, status, trailerUrl }),
       });
 
       if (res.ok) {
@@ -72,6 +73,17 @@ export default function EditGameForm({ game }: { game: Game }) {
             placeholder="플랫폼 (예: PC, PS5, 닌텐도 Switch)"
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
+            required
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          장르
+          <input
+            type="text"
+            placeholder="예: RPG, 액션, 퍼즐"
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
             required
           />
         </label>

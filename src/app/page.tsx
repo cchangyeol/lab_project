@@ -1,19 +1,37 @@
 // 저장된 게임 기록을 카드 목록으로 보여주는 화면
 import Link from 'next/link'; // 카드를 누르면 다른 페이지로 이동시키는 링크 컴포넌트
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
-import type { Game } from '@/types/game'; // 게임 기록 타입
+import type { Game, GameStatus } from '@/types/game'; // 게임 기록 타입
 
+
+type SearchParams = {
+  q?: string;
+  status?: string;
+  platform?: string;
+  genre?: string;
+  sort?: string;
+}
 
 // 서버에서 실행되는 함수라 DB에 바로 접근 가능 (API를 안 거쳐도 됨)
-// q(검색어)가 있으면 게임명에 그 글자가 들어간 것만, 없으면 전체를 가져옴
-async function getGames(q?: string): Promise<Game[]> {
+// 검색어/필터/정렬 조건에 맞는 게임 기록을 DB에서 가져온다
+async function getGames(params: SearchParams): Promise<Game[]> {
   const client = await clientPromise;
   const db = client.db('game-log');
 
-  // $regex: 게임명에 검색어가 포함되어 있는지 찾는다. $options: 'i'는 대소문자 구분 안 함
-  const filter = q ? { title: { $regex: q, $options: 'i' } } : {};
+  // 값이 있는 조건만 필터에 추가 (없으면 그 조건은 무시)
+  const filter: Record<string, unknown> = {};
+  if (params.q) filter.title = { $regex: params.q, $options: 'i' };
+  if (params.status) filter.status = params.status
+  if (params.platform) filter.platform = params.platform;
+  if (params.genre) filter.genre = params.genre;
 
-  const games = await db.collection('games').find(filter).toArray();
+  // 정렬 기준 고르기 (아무것도 안 고르면 정렬 안 함)
+  let sort: Record<string, 1 | -1> = {};
+  if (params.sort === 'rating') sort = { rating: -1 };  // 평점 높은 순
+  else if (params.sort === 'title') sort = { title: -1 }; // 이름 가나다순
+  else if (params.sort === 'recent') sort = { endDate: -1 }; // 최근에 플레이한 순
+
+  const games = await db.collection('games').find(filter).sort(sort).toArray();
 
   return games.map((game) => ({
     ...game,
@@ -21,10 +39,27 @@ async function getGames(q?: string): Promise<Game[]> {
   })) as Game[];
 }
 
+// 필터 드롭다운에 쓸 플랫폼/장르 목록을 DB에 실제로 저장된 값들에서 뽑아온다
+async function getFilterOptions(){
+  const client = await clientPromise;
+  const db = client.db('game-log');
+
+  const platforms = await db.collection('games').distinct('platform') // 중복 없이 값만 가져옴
+  const genres = await db.collection('games').distinct('genre');
+
+  return { platforms, genres };
+}
+const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '진행중', '클리어', '중단'];
+
 // 페이지 컴포넌트도 async로 만들면 그 안에서 await로 데이터를 먼저 가져올 수 있음
 // searchParams는 주소창의 ?q=값 부분을 Next.js가 자동으로 이 함수에 넘겨줌
-export default async function HomePage({ searchParams }: { searchParams: { q?: string } }) {
-  const games = await getGames(searchParams.q);
+export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
+
+  // 목록 데이터와 필터 옵션을 동시에 가져옴 (서로 가져올 필요 없이 같이 처리
+  const [games, { platforms, genres }] = await Promise.all([
+    getGames(searchParams),
+    getFilterOptions(),
+  ]);
 
   return (
     <main className="p-8">
@@ -35,30 +70,58 @@ export default async function HomePage({ searchParams }: { searchParams: { q?: s
         </Link>
       </div>
 
-      <form method="get" className="mb-6">
+      <form method="get" className="mb-6 flex flex-wrap gap-2 items-center">
         <input
           type="text"
-          name="q" // 이 이름이 그대로 주소의 ?q값 에서 키(q)가 됨
+          name="q"
           placeholder="게임명으로 검색"
-          defaultValue={searchParams.q ?? ''} // 검색한 뒤에도 입력했던 검색어가 그대로 남아있음
-
+          defaultValue={searchParams.q ?? ''}
           className="border px-2 py-1"
         />
-        <button type="submit" className="ml-2 underline">검색</button>
+
+        <select name="status" defaultValue={searchParams.status ?? ''} className="border px-2 py-1">
+          <option value="">상태 전체</option>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+
+        <select name="platform" defaultValue={searchParams.platform ?? ''} className="border px-2 py-1">
+          <option value="">플랫폼 전체</option>
+          {platforms.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+
+        <select name="genre" defaultValue={searchParams.genre ?? ''} className="border px-2 py-1">
+          <option value="">장르 전체</option>
+          {genres.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+
+        <select name="sort" defaultValue={searchParams.sort ?? ''} className="border px-2 py-1">
+          <option value="">정렬: 기본</option>
+          <option value="rating">평점 높은 순</option>
+          <option value="title">이름 가나다순</option>
+          <option value="recent">최근 플레이한 순</option>
+        </select>
+
+        <button type="submit" className="underline">적용</button>
       </form>
 
       {games.length === 0 ? (
-        <p>{searchParams.q ? '검색 결과가 없습니다.' : '아직 등록된 기록이 없습니다.'}</p>
+        <p>조건에 맞는 기록이 없습니다.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {games.map((game) => (
             <Link
               key={game._id}
-              href={`/games/${game._id}`} // 게임 상세 페이지로 이동하는 링크
-              className="border p-4 rounded flex flex-col gap-1 hover:shadow-lg transition"
+              href={`/games/${game._id}`}
+              className="border rounded p-4 flex flex-col gap-1"
             >
               <span className="font-bold">{game.title}</span>
-              <span className="text-sm text-gray-500">{game.platform}</span>
+              <span className="text-sm text-gray-500">{game.platform} · {game.genre}</span>
               <span className="text-xs">{game.status}</span>
             </Link>
           ))}
