@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화�
 import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져옴
 import BackButton from '@/components/BackButton';
 
+const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200';
+
 export default function NewGamePage() {
   const router = useRouter(); // 저장 성공하면 목록으로 보내는데 씀
 
@@ -59,36 +61,67 @@ export default function NewGamePage() {
 
           {/* 등록 폼과 같은 흰 카드 스타일 */}
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col gap-4">
-            <h1 className="text-xl font-bold text-stone-800">게임 기록 수정</h1>
+            <h1 className="text-xl font-bold text-stone-800">게임 기록 등록</h1>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               게임명
-              <input type="text" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <input
+                type="text"
+                className={inputClass}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               플랫폼
-              <input type="text" className={inputClass} value={platform} onChange={(e) => setPlatform(e.target.value)} required />
+              <input
+                type="text"
+                className={inputClass}
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                required />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               장르
-              <input type="text" className={inputClass} value={genre} onChange={(e) => setGenre(e.target.value)} required />
+              <input
+                type="text"
+                className={inputClass}
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                required />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               시작일
-              <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+              <input
+                type="date"
+                className={inputClass}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               마지막으로 플레이한 날 (선택)
-              <input type="date" className={inputClass} min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <input
+                type="date"
+                className={inputClass}
+                min={startDate}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)} />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               플레이 시간 (시간 단위)
-              <input type="number" min={0} className={inputClass} value={playTime} onChange={(e) => setPlayTime(e.target.value)} required />
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                value={playTime}
+                onChange={(e) => setPlayTime(e.target.value)}
+                required />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -119,11 +152,16 @@ export default function NewGamePage() {
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               트레일러 유튜브 링크 (선택)
-              <input type="url" className={inputClass} value={trailerUrl} onChange={(e) => setTrailerUrl(e.target.value)} />
+              <input
+                type="url"
+                className={inputClass}
+                value={trailerUrl}
+                onChange={(e) => setTrailerUrl(e.target.value)} />
             </label>
 
-            <button type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">
-              수정 완료
+            <button
+              type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">
+              등록 완료
             </button>
           </div>
         </form>
