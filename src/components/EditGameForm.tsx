@@ -65,32 +65,63 @@ export default function EditGameForm({ game }: { game: Game }) {
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             게임명
-            <input type="text" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <input
+              type="text"
+              className={inputClass}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required />
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             플랫폼
-            <input type="text" className={inputClass} value={platform} onChange={(e) => setPlatform(e.target.value)} required />
+            <input
+              type="text"
+              className={inputClass}
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              required />
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             장르
-            <input type="text" className={inputClass} value={genre} onChange={(e) => setGenre(e.target.value)} required />
+            <input
+              type="text"
+              className={inputClass}
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+              required />
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             시작일
-            <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+            <input
+              type="date"
+              className={inputClass}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required />
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             마지막으로 플레이한 날 (선택)
-            <input type="date" className={inputClass} min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <input
+              type="date"
+              className={inputClass}
+              min={startDate}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             플레이 시간 (시간 단위)
-            <input type="number" min={0} className={inputClass} value={playTime} onChange={(e) => setPlayTime(e.target.value)} required />
+            <input
+              type="number"
+              min={0}
+              className={inputClass}
+              value={playTime}
+              onChange={(e) => setPlayTime(e.target.value)}
+              required />
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -121,7 +152,11 @@ export default function EditGameForm({ game }: { game: Game }) {
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             트레일러 유튜브 링크 (선택)
-            <input type="url" className={inputClass} value={trailerUrl} onChange={(e) => setTrailerUrl(e.target.value)} />
+            <input
+            type="url"
+            className={inputClass}
+            value={trailerUrl}
+            onChange={(e) => setTrailerUrl(e.target.value)} />
           </label>
 
           <button type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">

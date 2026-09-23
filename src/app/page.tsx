@@ -28,7 +28,7 @@ async function getGames(params: SearchParams): Promise<Game[]> {
   // 정렬 기준 고르기 (아무것도 안 고르면 정렬 안 함)
   let sort: Record<string, 1 | -1> = {};
   if (params.sort === 'rating') sort = { rating: -1 };  // 평점 높은 순
-  else if (params.sort === 'title') sort = { title: -1 }; // 이름 가나다순
+  else if (params.sort === 'title') sort = { title: 1 }; // 이름 가나다순
   else if (params.sort === 'recent') sort = { endDate: -1 }; // 최근에 플레이한 순
 
   const games = await db.collection('games').find(filter).sort(sort).toArray();
@@ -49,12 +49,12 @@ async function getFilterOptions(){
 
   return { platforms, genres };
 }
-const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '진행중', '클리어', '중단'];
+const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '하는중', '클리어', '중단'];
 
 // 상태별 배지 색깔 - 파스텔 톤으로 하나씩 지정
 const STATUS_STYLES: Record<GameStatus, string> = {
   하고싶음: 'bg-sky-100 text-sky-700',
-  진행중: 'bg-amber-100 text-amber-700',
+  하는중: 'bg-amber-100 text-amber-700',
   클리어: 'bg-emerald-100 text-emerald-700',
   중단: 'bg-rose-100 text-rose-700',
 };
@@ -70,17 +70,17 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   ]);
 
   return (
-    <main className="min-h-screen bg-50 p-8">
+    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-amber-50 p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-stone-800">게임 기록</h1>
         <Link
           href="/games/new"
-          className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full pax-4 py-2 text-sm font-medium transition">
+          className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-3xl px-4 py-2 text-sm font-medium transition ">
           + 새 기록
         </Link>
       </div>
 
-      <form method="get" className="mb-8 flex flex-wrap gap-2 items-center bg-white border-stone-200 rounded-2xl p-3">
+      <form method="get" className="mb-8 flex flex-wrap gap-2 items-center bg-white border border-stone-200 rounded-2xl p-3">
         <input
           type="text"
           name="q"
@@ -90,7 +90,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         />
 
         <select name="status" defaultValue={searchParams.status ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
           <option value="">상태 전체</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -98,7 +98,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <select name="platform" defaultValue={searchParams.platform ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
           <option value="">플랫폼 전체</option>
           {platforms.map((p) => (
             <option key={p} value={p}>{p}</option>
@@ -106,7 +106,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <select name="genre" defaultValue={searchParams.genre ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
           <option value="">장르 전체</option>
           {genres.map((g) => (
             <option key={g} value={g}>{g}</option>
@@ -114,7 +114,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <select name="sort" defaultValue={searchParams.sort ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
           <option value="">정렬: 기본</option>
           <option value="rating">평점 높은 순</option>
           <option value="title">이름 가나다순</option>
@@ -122,7 +122,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <button type="submit"
-        className="uml-auto bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium transition">적용</button>
+        className="ml-auto bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium transition">적용</button>
       </form>
 
       {games.length === 0 ? (
@@ -139,7 +139,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
               <span className="font-bold text-stone-800">{game.title}</span>
               <span className="text-sm text-stone-500">{game.platform} · {game.genre}</span>
-              <span className="`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}">{game.status}</span>
+              <span className={`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
             </Link>
           ))}
         </div>

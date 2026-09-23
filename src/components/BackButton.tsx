@@ -9,7 +9,7 @@ export default function BackButton() {
   return (
     <button
       onClick={() => router.back()} // 이전 화면 이동
-      className="self-start mb-4 text-sm underline" // self-start: 부모의 flex-col 정렬을 무시
+      className="self-start mb-4 text-sm text-sky-600 hover:text-sky-800 underline transition" // self-start: 부모의 flex-col 정렬을 무시
     >
       ←
     </button>
