@@ -88,7 +88,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
             <dl className="text-sm text-stone-600 flex flex-col gap-1 mt-1">
               <div className="flex justify-between">
                 <dt>시작일</dt>
-                <dd>{game.startDate}</dd>
+                <dd>{game.status === '하고싶음' ? '출시 예정' : game.startDate}</dd>
               </div>
               {game.endDate && (
                 <div className="flex justify-between">
