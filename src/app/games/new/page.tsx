@@ -22,6 +22,28 @@ export default function NewGamePage() {
   const [rating, setRating] = useState(0); // 게임 평점
   const [status, setStatus] = useState<GameStatus>('하고싶음'); // 게임 상태, 기본값은 '하고싶음'
   const [trailerUrl, setTrailerUrl] = useState(''); // 게임 트레일러 URL
+  const [screenshots, setScreenshot] = useState<string[]>([]); // 업로드된 스크린샷 주소
+  const [uploading, setUploading] = useState(false);
+
+  // 파일을 고르면 하나씩 /api/upload로 올리고, 돌아온 주소를 screenshot에 쌓음
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const uploadedUrls: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      uploadedUrls.push(data.url);
+    }
+
+    setScreenshot((prev) => [...prev, ...uploadedUrls]);
+    setUploading(false);
+  }
 
   // 저장 버튼을 눌렀을 때 실행되는 함수
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -44,7 +66,7 @@ export default function NewGamePage() {
     const res = await fetch('/api/games', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, platform, genre, startDate, playTime, endDate, rating, status, trailerUrl }), // 입력값들을 JSON으로 변환해서 보냄
+      body: JSON.stringify({ title, platform, genre, startDate, playTime: playTimeNum, endDate, rating, status, trailerUrl, screenshots }), // 입력값들을 JSON으로 변환해서 보냄
     });
 
     if (res.ok) {
@@ -158,6 +180,19 @@ export default function NewGamePage() {
                 value={trailerUrl}
                 onChange={(e) => setTrailerUrl(e.target.value)} />
             </label>
+
+            <label className="flex flex-col gap-1 text-sm text-stone-600">
+              게임 스크린샷
+              <input type="file" accept="image/*" multiple onChange={handleFileChange} className={inputClass} />
+            </label>
+            {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
+            {screenshots.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {screenshots.map((url) => (
+                  <img key={url} src={url} alt="스크린샷 미리보기" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+                ))}
+              </div>
+            )}
 
             <button
               type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">

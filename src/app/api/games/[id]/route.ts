@@ -34,6 +34,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         rating: body.rating,
         status: body.status,
         trailerUrl: body.trailerUrl,
+        screenshots: body.screenshots
       },
     }
   );

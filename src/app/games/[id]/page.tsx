@@ -50,10 +50,23 @@ export default async function GameDetailPage({ params }: { params: { id: string 
 
   const youtubeId = game.trailerUrl ? getYoutubeId(game.trailerUrl) : null;
 
+  // 스크린샷을 왼쪽/오른쪽에 번갈아 배치
+  const screenshots = game.screenshots ?? [];
+  const leftShots = screenshots.filter((_, i) => i % 2 === 0);
+  const rightShots = screenshots.filter((_, i) => i % 2 === 1);
+
   return (
     <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
       <div className="w-full max-w-md">
         <BackButton />
+
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-6 items-start">
+          <div className="flex md:flex-col gap-3 order-2 md:order-1">
+            {leftShots.map((url) => (
+              <img key={url} src={url} alt="게임 스크린샷" className="rounded-xl border border-stone-200 shadow-sm w-full object-cover" />
+            ))}
+          </div>
+        </div>
 
         {/* 콘솔 몸체: 두꺼운 테두리 + 안쪽에 밝은 화면부 (검정 대신 하늘색으로) */}
         <div className="rounded-3xl border-4 border-stone-200 bg-white p-1.5 shadow-md">

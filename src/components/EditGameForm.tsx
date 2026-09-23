@@ -23,6 +23,28 @@ export default function EditGameForm({ game }: { game: Game }) {
     const [rating, setRating] = useState(game.rating);
     const [status, setStatus] = useState<GameStatus>(game.status);
     const [trailerUrl, setTrailerUrl] = useState(game.trailerUrl ?? '');
+    const [screenshots, setScreenshot] = useState<string[]>(game.screenshots ?? []); // 업로드된 스크린샷 주소
+    const [uploading, setUploading] = useState(false);
+
+    // 파일을 고르면 하나씩 /api/upload로 올리고, 돌아온 주소를 screenshot에 쌓음
+    async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      setUploading(true);
+      const uploadedUrls: string[] = [];
+
+      for (const file of Array.from(files)) {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch('api/upload', { method: 'POST', body: form });
+        const data = await res.json();
+        uploadedUrls.push(data.url);
+      }
+
+      setScreenshot((prev) => [...prev, ...uploadedUrls]);
+      setUploading(false);
+    }
 
     async function handleSubmit(e: React.FormEvent) {
       e.preventDefault();
@@ -43,7 +65,7 @@ export default function EditGameForm({ game }: { game: Game }) {
       const res = await fetch(`/api/games/${game._id}`, {
         method: 'PUT', // 새로 만드는 게 아닌 기존 문서를 바꾸는거라 POST 대신 PUT
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, platform, genre, startDate, endDate, playTime, rating, status, trailerUrl }),
+        body: JSON.stringify({ title, platform, genre, startDate, endDate, playTime:playTimeNum, rating, status, trailerUrl, screenshots }),
       });
 
       if (res.ok) {
@@ -158,6 +180,19 @@ export default function EditGameForm({ game }: { game: Game }) {
             value={trailerUrl}
             onChange={(e) => setTrailerUrl(e.target.value)} />
           </label>
+
+          <label className="flex flex-col gap-1 text-sm text-stone-600">
+            게임 스크린샷
+            <input type="file" accept="image/*" multiple onChange={handleFileChange} className={inputClass} />
+          </label>
+          {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
+          {screenshots.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {screenshots.map((url) => (
+                <img key={url} src={url} alt="스크린샷 미리보기" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+              ))}
+            </div>
+          )}
 
           <button type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">
             수정 완료

@@ -15,6 +15,7 @@ export interface Game {
   rating: number; // 게임 평점(1~5 사이의 값)
   status: GameStatus; // 게임 상태
   trailerUrl?: string; // 게임 트레일러 URL
+  screenshots?: string[] // 업로드한 스크린샷 이미지 주소들
 }
 
 
