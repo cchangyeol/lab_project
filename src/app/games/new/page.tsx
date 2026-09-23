@@ -32,6 +32,7 @@ export default function NewGamePage() {
     }
 
     // 플레이 시간이나 평점이 숫자가 아니면 저장하지 않고 알림만 띄움
+    const playTimeNum = playTime === '' ? 0 : Math.max(0, Number(playTime));
     if (Number.isNaN(playTime) || Number.isNaN(rating)) {
       alert('숫자 외엔 입력할 수 없습니다.');
       return;

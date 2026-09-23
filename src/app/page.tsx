@@ -51,6 +51,14 @@ async function getFilterOptions(){
 }
 const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '진행중', '클리어', '중단'];
 
+// 상태별 배지 색깔 - 파스텔 톤으로 하나씩 지정
+const STATUS_STYLES: Record<GameStatus, string> = {
+  하고싶음: 'bg-sky-100 text-sky-700',
+  진행중: 'bg-amber-100 text-amber-700',
+  클리어: 'bg-emerald-100 text-emerald-700',
+  중단: 'bg-rose-100 text-rose-700',
+};
+
 // 페이지 컴포넌트도 async로 만들면 그 안에서 await로 데이터를 먼저 가져올 수 있음
 // searchParams는 주소창의 ?q=값 부분을 Next.js가 자동으로 이 함수에 넘겨줌
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
@@ -62,67 +70,76 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   ]);
 
   return (
-    <main className="p-8">
+    <main className="min-h-screen bg-50 p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold">게임 기록</h1>
-        <Link href="/games/new" className="underline bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          새 게임 추가
+        <h1 className="text-2xl font-bold text-stone-800">게임 기록</h1>
+        <Link
+          href="/games/new"
+          className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full pax-4 py-2 text-sm font-medium transition">
+          + 새 기록
         </Link>
       </div>
 
-      <form method="get" className="mb-6 flex flex-wrap gap-2 items-center">
+      <form method="get" className="mb-8 flex flex-wrap gap-2 items-center bg-white border-stone-200 rounded-2xl p-3">
         <input
           type="text"
           name="q"
           placeholder="게임명으로 검색"
           defaultValue={searchParams.q ?? ''}
-          className="border px-2 py-1"
+          className="border border-stone-200 rounded-full px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
         />
 
-        <select name="status" defaultValue={searchParams.status ?? ''} className="border px-2 py-1">
+        <select name="status" defaultValue={searchParams.status ?? ''}
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
           <option value="">상태 전체</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
 
-        <select name="platform" defaultValue={searchParams.platform ?? ''} className="border px-2 py-1">
+        <select name="platform" defaultValue={searchParams.platform ?? ''}
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
           <option value="">플랫폼 전체</option>
           {platforms.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
         </select>
 
-        <select name="genre" defaultValue={searchParams.genre ?? ''} className="border px-2 py-1">
+        <select name="genre" defaultValue={searchParams.genre ?? ''}
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
           <option value="">장르 전체</option>
           {genres.map((g) => (
             <option key={g} value={g}>{g}</option>
           ))}
         </select>
 
-        <select name="sort" defaultValue={searchParams.sort ?? ''} className="border px-2 py-1">
+        <select name="sort" defaultValue={searchParams.sort ?? ''}
+        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm">
           <option value="">정렬: 기본</option>
           <option value="rating">평점 높은 순</option>
           <option value="title">이름 가나다순</option>
           <option value="recent">최근 플레이한 순</option>
         </select>
 
-        <button type="submit" className="underline">적용</button>
+        <button type="submit"
+        className="uml-auto bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium transition">적용</button>
       </form>
 
       {games.length === 0 ? (
-        <p>조건에 맞는 기록이 없습니다.</p>
+        <p className="text-stone-500">조건에 맞는 기록이 없습니다.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8">
           {games.map((game) => (
             <Link
               key={game._id}
               href={`/games/${game._id}`}
-              className="border rounded p-4 flex flex-col gap-1"
+              className="group relative bg-white rounded-2xl border border-stone-200 shadow-sm p-5 pt-7 flex flex-col gap-2 transition hover:-translate-y-1 hover:shadow-md"
             >
-              <span className="font-bold">{game.title}</span>
-              <span className="text-sm text-gray-500">{game.platform} · {game.genre}</span>
-              <span className="text-xs">{game.status}</span>
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-3 rounded-b-md bg-stone-200 group-hover:bg-sky-200 transition" />
+
+              <span className="font-bold text-stone-800">{game.title}</span>
+              <span className="text-sm text-stone-500">{game.platform} · {game.genre}</span>
+              <span className="`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}">{game.status}</span>
             </Link>
           ))}
         </div>
