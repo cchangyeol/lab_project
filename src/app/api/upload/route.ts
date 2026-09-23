@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   const blob = await put(file.name, file, {
-    access: 'pubilc',
+    access: 'public',
     addRandomSuffix: true // 같은 이름으로 덮어쓰는 사고 방지
   });
 

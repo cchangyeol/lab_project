@@ -37,7 +37,7 @@ export default function EditGameForm({ game }: { game: Game }) {
       for (const file of Array.from(files)) {
         const form = new FormData();
         form.append('file', file);
-        const res = await fetch('api/upload', { method: 'POST', body: form });
+        const res = await fetch('/api/upload', { method: 'POST', body: form });
         const data = await res.json();
         uploadedUrls.push(data.url);
       }
