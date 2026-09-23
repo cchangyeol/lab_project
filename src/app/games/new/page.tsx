@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화�
 import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져옴
 import BackButton from '@/components/BackButton';
 
-const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200';
+const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200disables:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 
 export default function NewGamePage() {
   const router = useRouter(); // 저장 성공하면 목록으로 보내는데 씀
@@ -43,6 +43,11 @@ export default function NewGamePage() {
 
     setScreenshot((prev) => [...prev, ...uploadedUrls]);
     setUploading(false);
+  }
+
+  // 스크린샷 목록에서 하나를 뺌
+  function handleRemoveScreenshot(url: string) {
+    setScreenshot((prev) => prev.filter((u) => u !== url));
   }
 
   // 저장 버튼을 눌렀을 때 실행되는 함수
@@ -117,13 +122,21 @@ export default function NewGamePage() {
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               시작일
-              <input
-                type="date"
-                className={inputClass}
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required />
-            </label>
+              {status === '하고싶음' ? (
+                <input
+                  type="text"
+                  className={inputClass}
+                  value="출시 예정"
+                  disabled />
+              ) : (
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required />
+                )}
+              </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               마지막으로 플레이한 날 (선택)
@@ -132,7 +145,8 @@ export default function NewGamePage() {
                 className={inputClass}
                 min={startDate}
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)} />
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={status === '하고싶음'} />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -143,7 +157,8 @@ export default function NewGamePage() {
                 className={inputClass}
                 value={playTime}
                 onChange={(e) => setPlayTime(e.target.value)}
-                required />
+                disabled={status === '하고싶음'}
+                required={status !== '하고싶음'} />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -158,13 +173,25 @@ export default function NewGamePage() {
                   const value = e.target.value;
                   setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
                 }}
-                required
-              />
+                disabled={status === '하고싶음'}
+                required={status !== '하고싶음'} />
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               상태
-              <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as GameStatus)}>
+              <select
+                className={inputClass}
+                value={status}
+                onChange={(e) => {
+                  const newStatus = e.target.value as GameStatus;
+                  setStatus(newStatus);
+                  if (newStatus === '하고싶음') {
+                    setStartDate('');
+                    setEndDate('');
+                    setPlayTime('');
+                    setRating(0);
+                  }
+                }}>
                 <option value="하고싶음">하고싶음</option>
                 <option value="하는중">하는중</option>
                 <option value="클리어">클리어</option>
@@ -189,7 +216,16 @@ export default function NewGamePage() {
             {screenshots.length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 {screenshots.map((url) => (
-                  <img key={url} src={url} alt="스크린샷 미리보기" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+                  <div key={url} className="relative">
+                    <img key={url} src={url} alt="스크린샷 미리보기" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveScreenshot(url)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-200 text-rose-900 text-xs leading-none flex items-center justify-center"
+                    >
+                      x
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
