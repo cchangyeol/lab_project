@@ -46,7 +46,7 @@ export default function NewGamePage() {
     setUploading(true);
     const uploadedUrls: string[] = [];
 
-    for (const file of Array.from(files)) {
+    for (const file of filesToUpload) {
       const form = new FormData();
       form.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: form });
@@ -101,9 +101,17 @@ export default function NewGamePage() {
     const res = await fetch('/api/games', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, platform, genre, startDate,
-        playTime: playTimeNum, endDate, rating, status,
-        trailerUrls: trailerUrls.filter((u) => u.trim() !== ''), screenshots }), // 입력값들을 JSON으로 변환해서 보냄
+      body: JSON.stringify({
+        title,
+        platform,
+        genre,
+        startDate,
+        playTime: playTimeNum,
+        endDate,
+        rating,
+        status,
+        trailerUrls: trailerUrls.filter((u) => u.trim() !== ''),
+        screenshots }), // 입력값들을 JSON으로 변환해서 보냄
     });
 
     if (res.ok) {
@@ -258,7 +266,13 @@ export default function NewGamePage() {
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               게임 스크린샷 (선택, 최대 40장 - {screenshots.length}/40)
-              <input type="file" accept="image/*" multiple onChange={handleFileChange} className={inputClass} disabled={screenshots.length >= 40} />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className={inputClass}
+                disabled={screenshots.length >= 40} />
             </label>
             {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
             {screenshots.length > 0 && (
