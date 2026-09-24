@@ -1,7 +1,7 @@
 // 게임 기록 하나에 들어가는 데이터 모양을 정의하는 파일
 
 // 게임 상태 네 가지 값
-export type GameStatus = '하고싶음' | '진행중' | '클리어' | '중단';
+export type GameStatus = '하고싶음' | '하는중' | '클리어' | '중단';
 
 // 게임 기록 하나의 데이터 모양
 export interface Game {
@@ -14,8 +14,8 @@ export interface Game {
   playTime: number; // 총 플레이 시간(시간 단위)
   rating: number; // 게임 평점(1~5 사이의 값)
   status: GameStatus; // 게임 상태
-  trailerUrl?: string; // 게임 트레일러 URL
-  screenshots?: string[] // 업로드한 스크린샷 이미지 주소들
+  trailerUrls?: string[]; // 게임 트레일러 URL
+  screenshots?: string[]; // 업로드한 스크린샷 이미지 주소들
 }
 
 

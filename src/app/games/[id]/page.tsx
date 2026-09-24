@@ -2,10 +2,13 @@
 import { ObjectId } from 'mongodb'; // MongoDB에서 문서를 id로 찾을 때 쓰는 특수 id 타입
 import { notFound } from 'next/navigation'; // id에 해당하는 기록이 없을 때 404 화면 보여주기
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
-import type { Game } from '@/types/game'; // 게임 기록 타입
+import type { Game, GameStatus } from '@/types/game'; // 게임 기록 타입
 import DeleteGameButton from '@/components/DeleteGameButton'; // 삭제 버튼
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
+import ScreenshotPanel from '@/components/ScreenshotPanel';
+import GameConsoleCard from '@/components/GameConsoleCard';
+
 
 // 목록 화면과 같은 상태 배지 색 (파일이 달라서 똑같이 한 번 더 정의)
 const STATUS_STYLES: Record<GameStatus, string> = {
@@ -48,83 +51,39 @@ export default async function GameDetailPage({ params }: { params: { id: string 
     notFound(); // 못 찾으면 Next.js 기본 404 화면을 보여준다
   }
 
-  const youtubeId = game.trailerUrl ? getYoutubeId(game.trailerUrl) : null;
+  const trailerIds = (game.trailerUrls ?? [])
+    .filter((url): url is string => Boolean(url))
+    .map((url) => getYoutubeId(url))
+    .filter((id): id is string => Boolean(id));
 
   // 스크린샷을 왼쪽/오른쪽에 번갈아 배치
   const screenshots = game.screenshots ?? [];
-  const leftShots = screenshots.filter((_, i) => i % 2 === 0);
-  const rightShots = screenshots.filter((_, i) => i % 2 === 1);
 
-  return (
-    <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
-      <div className="w-full max-w-md">
-        <BackButton />
+      return (
+    <main className="min-h-screen bg-stone-50 p-8">
+      <BackButton />
 
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[260px_1fr_260px] gap-6 items-start">
-          <div className="flex md:flex-col gap-3 order-2 md:order-1">
-            {leftShots.map((url) => (
-              <img key={url} src={url} alt="게임 스크린샷" className="rounded-xl border border-stone-200 shadow-sm w-full aspect-[4/3] object-cover" />
-            ))}
+      {/* 사진첩을 펼쳐놓은 것처럼 왼쪽 정보 / 오른쪽 사진 2단 구성 */}
+      <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-md md:flex overflow-hidden">
+        <div className="p-6 md:w-1/2">
+          <GameConsoleCard game={game} trailerIds={trailerIds} />
+
+          <div className="flex gap-2 mt-4">
+            <Link
+              href={`/games/${game._id}/edit`}
+              className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition"
+            >
+              수정
+            </Link>
+            <DeleteGameButton gameId={game._id!} />
           </div>
         </div>
 
-        {/* 콘솔 몸체: 두꺼운 테두리 + 안쪽에 밝은 화면부 (검정 대신 하늘색으로) */}
-        <div className="rounded-3xl border-4 border-stone-200 bg-white p-1.5 shadow-md">
-          <div className="rounded-2xl bg-sky-50 p-6 flex flex-col gap-3">
-            {/* 전원 표시등 - 카트리지가 꽂혀서 켜졌다는 느낌 */}
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-xs text-stone-400 tracking-wide">POWER ON</span>
-            </div>
+        {/* 책등처럼 보이는 가운데 구분선 (좁은 화면에서는 안 보임) */}
+        <div className="hidden md:block w-px bg-stone-200" />
 
-            <h1 className="text-xl font-bold text-stone-800">{game.title}</h1>
-
-            <div className="flex flex-wrap gap-2">
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.platform}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.genre}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
-            </div>
-
-            <dl className="text-sm text-stone-600 flex flex-col gap-1 mt-1">
-              <div className="flex justify-between">
-                <dt>시작일</dt>
-                <dd>{game.status === '하고싶음' ? '출시 예정' : game.startDate}</dd>
-              </div>
-              {game.endDate && (
-                <div className="flex justify-between">
-                  <dt>마지막 플레이</dt>
-                  <dd>{game.endDate}</dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt>플레이 시간</dt>
-                <dd>{game.playTime}시간</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>평점</dt>
-                <dd>{game.rating} / 5</dd>
-              </div>
-            </dl>
-
-            {youtubeId && (
-              <iframe
-                className="mt-2 w-full aspect-video rounded-xl"
-                src={`https://www.youtube.com/embed/${youtubeId}`}
-                title="트레일러"
-                allowFullScreen
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-4">
-          <Link
-            href={`/games/${game._id}/edit`}
-            className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition"
-          >
-            수정
-          </Link>
-          <DeleteGameButton gameId={game._id!} />
+        <div className="p-6 md:w-1/2 bg-stone-50">
+          <ScreenshotPanel screenshots={screenshots} />
         </div>
       </div>
     </main>
