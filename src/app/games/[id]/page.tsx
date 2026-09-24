@@ -64,11 +64,11 @@ export default async function GameDetailPage({ params }: { params: { id: string 
       <BackButton />
 
       {/* 사진첩을 펼쳐놓은 것처럼 왼쪽 정보 / 오른쪽 사진 2단 구성 */}
-      <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-md md:flex overflow-hidden min-h-[520px]">
+      <div className="max-w-6xl mx-auto bg-white border-2 border-stone-300 rounded-3xl shadow-md md:flex overflow-hidden min-h-[520px]">
         <div className="p-8 md:w-1/2">
           <GameConsoleCard game={game} trailerIds={trailerIds} />
 
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 ml-4">
             <Link
               href={`/games/${game._id}/edit`}
               className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition"
@@ -83,7 +83,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
         <div className="hidden md:block w-px bg-stone-200" />
 
         <div className="p-8 md:w-1/2 bg-stone-50">
-          <ScreenshotPanel screenshots={screenshots} />
+          <ScreenshotPanel gameId={game._id!} screenshots={screenshots} />
         </div>
       </div>
     </main>

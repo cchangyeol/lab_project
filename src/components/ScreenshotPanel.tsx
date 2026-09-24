@@ -3,11 +3,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const PER_PAGE = 10;
 
-export default function ScreenshotPanel({ screenshots }: { screenshots: string[] }) {
+export default function ScreenshotPanel({ gameId, screenshots }: { gameId: string; screenshots: string[] }) {
+  const router = useRouter();
   const [page, setPage] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(screenshots.length / PER_PAGE)); // 최소 1페이지
   const start = page * PER_PAGE;
@@ -15,6 +18,35 @@ export default function ScreenshotPanel({ screenshots }: { screenshots: string[]
 
   function handleNext() {
     setPage((p) => (p + 1) % totalPages); // 마지막 페이지 다음엔 다시 처음 페이지
+  }
+
+  // 파일을 올리고, 기존 목록에 합쳐서 서버에 저장
+  async function handleAddPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const uploadedUrls: string[] =[];
+
+    for (const file of Array.from(files)) {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      uploadedUrls.push(data.url);
+    }
+
+    await fetch(`/api/games/${gameId}/screenshots`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        screenshots: [...screenshots, ...uploadedUrls]
+      }),
+    });
+
+    setUploading(false);
+    e.target.value = '';
+    router.refresh(); // 새로 올린 사진이 바로 보이게 함
   }
 
   return (
@@ -29,17 +61,29 @@ export default function ScreenshotPanel({ screenshots }: { screenshots: string[]
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-end mt-3">
+      <div className="flex justify-between items-center mt-3">
+        <label className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50 cursor-pointer">
+          +
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleAddPhotos}
+            className="hidden" />
+        </label>
+
+
+        {totalPages > 1 && (
           <button
             type="button"
             onClick={handleNext}
-            className="2-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-ceter justify-center text-sky-600 hover:bg-sky-50"
-            >
+            className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50"
+          >
               →
-            </button>
-        </div>
-      )}
+          </button>
+        )}
+      </div>
+      {uploading && <p className="text-xs text-stone-400 mt-2">업로드 중...</p>}
     </div>
   );
 }
