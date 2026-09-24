@@ -8,6 +8,7 @@ import BackButton from '@/components/BackButton';
 
 // 입력칸에 공통으로 쓰는 스타일 (반복되는 클래스라 변수로 빼둠)
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200disables:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
+const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', "Mobile"];
 
 // 부모(수정 페이지)가 DB에서 가져온 기존 기록을 game이라는 prop으로 넘겨줌
 export default function EditGameForm({ game }: { game: Game }) {
@@ -101,12 +102,16 @@ export default function EditGameForm({ game }: { game: Game }) {
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">
             플랫폼
-            <input
-              type="text"
+            <select
               className={inputClass}
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              required />
+              required>
+              <option value="">선택하세요</option>
+              {PLATFORM_OPTIONS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
           </label>
 
           <label className="flex flex-col gap-1 text-sm text-stone-600">

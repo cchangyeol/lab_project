@@ -8,6 +8,7 @@ import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져�
 import BackButton from '@/components/BackButton';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200disables:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
+const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', 'Mobile'];
 
 export default function NewGamePage() {
   const router = useRouter(); // 저장 성공하면 목록으로 보내는데 씀
@@ -102,12 +103,16 @@ export default function NewGamePage() {
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               플랫폼
-              <input
-                type="text"
+              <select
                 className={inputClass}
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
-                required />
+                required>
+                <option value="">선택하세요</option>
+                {PLATFORM_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
             </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">

@@ -60,10 +60,10 @@ export default async function GameDetailPage({ params }: { params: { id: string 
       <div className="w-full max-w-md">
         <BackButton />
 
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-6 items-start">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[260px_1fr_260px] gap-6 items-start">
           <div className="flex md:flex-col gap-3 order-2 md:order-1">
             {leftShots.map((url) => (
-              <img key={url} src={url} alt="게임 스크린샷" className="rounded-xl border border-stone-200 shadow-sm w-full object-cover" />
+              <img key={url} src={url} alt="게임 스크린샷" className="rounded-xl border border-stone-200 shadow-sm w-full aspect-[4/3] object-cover" />
             ))}
           </div>
         </div>
