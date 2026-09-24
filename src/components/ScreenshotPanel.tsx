@@ -5,7 +5,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-const PER_PAGE = 10;
+const PER_PAGE = 6;
 
 export default function ScreenshotPanel({ gameId, screenshots }: { gameId: string; screenshots: string[] }) {
   const router = useRouter();
@@ -81,7 +81,7 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
               <img
                 src={url}
                 alt="게임 스크린샷"
-                className="w-full aspect-square object-cover rounded-xl border border-stone-200 shadow-sm" />
+                className="w-full aspect-square object-contain bg-stone-100 rounded-xl border border-stone-200 shadow-sm" />
                 <button
                   type="button"
                   onClick={() => handleDeleteScreenshot(url)}
@@ -107,7 +107,6 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
             className="hidden" />
         </label>
 
-        {totalPages > 1 && (
           <button
             type="button"
             onClick={handleNext}
@@ -115,7 +114,6 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
           >
               →
           </button>
-        )}
       </div>
 
       {uploading && <p className="text-xs text-stone-400 mt-2">업로드 중...</p>}
