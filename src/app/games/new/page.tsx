@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화�
 import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져옴
 import BackButton from '@/components/BackButton';
 
-const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200disables:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
+const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', 'Mobile'];
 
 export default function NewGamePage() {
@@ -22,7 +22,7 @@ export default function NewGamePage() {
   const [playTime, setPlayTime] = useState(''); // 총 플레이 시간
   const [rating, setRating] = useState(0); // 게임 평점
   const [status, setStatus] = useState<GameStatus>('하고싶음'); // 게임 상태, 기본값은 '하고싶음'
-  const [trailerUrl, setTrailerUrl] = useState(''); // 게임 트레일러 URL
+  const [trailerUrls, setTrailerUrls] = useState<string[]>(['']); // 게임 트레일러 URL
   const [screenshots, setScreenshot] = useState<string[]>([]); // 업로드된 스크린샷 주소
   const [uploading, setUploading] = useState(false);
 
@@ -30,6 +30,18 @@ export default function NewGamePage() {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
+    const remaining = 40 - screenshots.length; // 몇 개 더 업로드 가능한지
+    if (remaining <= 0) {
+      alert('스크린샷 한도 도달');
+      e.target.value = '';
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remaining);
+    if (files.length > remaining) {
+      alert(`스크린샷은 최대 40개까지라 ${remaining}개만 업로드합니다.`);
+    }
 
     setUploading(true);
     const uploadedUrls: string[] = [];
@@ -51,6 +63,23 @@ export default function NewGamePage() {
     setScreenshot((prev) => prev.filter((u) => u !== url));
   }
 
+  // 트레일러를 여러개 추가할 수 있게하는 함수들
+  function handleTrailerChange(index: number, value: string) {
+    setTrailerUrls((prev) => prev.map((url, i) => (i === index ? value : url)));
+  }
+
+  function handleAddTrailer() {
+    if (trailerUrls.length >= 3) {
+      alert('트레일러는 최대 3개까지 등록할 수 있습니다.');
+      return;
+    }
+    setTrailerUrls((prev) => [...prev, '']);
+  }
+
+  function handleRemoveTrailer(index: number) {
+    setTrailerUrls((prev) => prev.filter((_, i) => i !== index));
+  }
+
   // 저장 버튼을 눌렀을 때 실행되는 함수
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
@@ -63,7 +92,7 @@ export default function NewGamePage() {
 
     // 플레이 시간이나 평점이 숫자가 아니면 저장하지 않고 알림만 띄움
     const playTimeNum = playTime === '' ? 0 : Math.max(0, Number(playTime));
-    if (Number.isNaN(playTime) || Number.isNaN(rating)) {
+    if (Number.isNaN(playTimeNum) || Number.isNaN(rating)) {
       alert('숫자 외엔 입력할 수 없습니다.');
       return;
     }
@@ -72,7 +101,9 @@ export default function NewGamePage() {
     const res = await fetch('/api/games', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, platform, genre, startDate, playTime: playTimeNum, endDate, rating, status, trailerUrl, screenshots }), // 입력값들을 JSON으로 변환해서 보냄
+      body: JSON.stringify({ title, platform, genre, startDate,
+        playTime: playTimeNum, endDate, rating, status,
+        trailerUrls: trailerUrls.filter((u) => u.trim() !== ''), screenshots }), // 입력값들을 JSON으로 변환해서 보냄
     });
 
     if (res.ok) {
@@ -204,18 +235,30 @@ export default function NewGamePage() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              트레일러 유튜브 링크 (선택)
-              <input
-                type="url"
-                className={inputClass}
-                value={trailerUrl}
-                onChange={(e) => setTrailerUrl(e.target.value)} />
-            </label>
+            <div className="flex flex-col gap-2 text-sm text-stone-600">
+              트레일러 유튜브 링크 (최대 3개)
+              {trailerUrls.map((url, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    type="url"
+                    className={`${inputClass} flex-1`}
+                    value={url}
+                    onChange={(e) => handleTrailerChange(i, e.target.value)} />
+                    {trailerUrls.length > 1 && (
+                      <button type="button" onClick={() => handleRemoveTrailer(i)}
+                      className="text-rose-600 text-sm px-2">삭제</button>
+                    )}
+                </div>
+              ))}
+              {trailerUrls.length < 3 && (
+                <button type="button" onClick={handleAddTrailer}
+                className="self-start text-sky-600 text-sm underline">+ 트레일러 추가</button>
+              )}
+            </div>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
-              게임 스크린샷
-              <input type="file" accept="image/*" multiple onChange={handleFileChange} className={inputClass} />
+              게임 스크린샷 (선택, 최대 40장 - {screenshots.length}/40)
+              <input type="file" accept="image/*" multiple onChange={handleFileChange} className={inputClass} disabled={screenshots.length >= 40} />
             </label>
             {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
             {screenshots.length > 0 && (

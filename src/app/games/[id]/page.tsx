@@ -56,7 +56,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
     .map((url) => getYoutubeId(url))
     .filter((id): id is string => Boolean(id));
 
-  // 스크린샷을 왼쪽/오른쪽에 번갈아 배치
+  // 스크린샷을 배치
   const screenshots = game.screenshots ?? [];
 
       return (
@@ -64,8 +64,8 @@ export default async function GameDetailPage({ params }: { params: { id: string 
       <BackButton />
 
       {/* 사진첩을 펼쳐놓은 것처럼 왼쪽 정보 / 오른쪽 사진 2단 구성 */}
-      <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-md md:flex overflow-hidden">
-        <div className="p-6 md:w-1/2">
+      <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-md md:flex overflow-hidden min-h-[520px]">
+        <div className="p-8 md:w-1/2">
           <GameConsoleCard game={game} trailerIds={trailerIds} />
 
           <div className="flex gap-2 mt-4">
@@ -82,7 +82,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
         {/* 책등처럼 보이는 가운데 구분선 (좁은 화면에서는 안 보임) */}
         <div className="hidden md:block w-px bg-stone-200" />
 
-        <div className="p-6 md:w-1/2 bg-stone-50">
+        <div className="p-8 md:w-1/2 bg-stone-50">
           <ScreenshotPanel screenshots={screenshots} />
         </div>
       </div>
