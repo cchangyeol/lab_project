@@ -26,6 +26,10 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
     setPage((p) => (p + 1) % totalPages); // 마지막 페이지 다음엔 다시 처음 페이지
   }
 
+  function handlePrev() {
+    setPage((p) => (p - 1 + totalPages) % totalPages); // 첫 페이지에서 누르면 마지막 페이지로 이동
+  }
+
   // 서버에 스크린샷 목록을 새로 저장하는 공통 함수
   async function saveScreenshots(next: Screenshot[]) {
     await fetch(`/api/games/${gameId}/screenshots`, {
@@ -88,10 +92,10 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid grid-cols-2 gap-3 flex-1">
+      <div className="columns-2 gap-3 flex-1">
         {current.length > 0 ? (
           current.map((shot) => (
-            <div key={shot.url} className="relative group">
+            <div key={shot.url} className="relative group mb-3 break-inside-avoid">
               <img
                 src={shot.url}
                 alt="게임 스크린샷"
@@ -111,7 +115,14 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
         )}
       </div>
 
-      <div className="flex justify-between items-center mt-3">
+      <div className="flex justify-center items-center gap-4 mt-3">
+        <button
+          type="button"
+          onClick={handlePrev}
+          className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50">
+            ←
+        </button>
+
         <label className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50 cursor-pointer">
           +
           <input

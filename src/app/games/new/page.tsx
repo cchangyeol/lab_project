@@ -21,7 +21,7 @@ export default function NewGamePage() {
   const [endDate, setEndDate] = useState(''); // 종료일
   const [playTime, setPlayTime] = useState(''); // 총 플레이 시간
   const [rating, setRating] = useState(0); // 게임 평점
-  const [status, setStatus] = useState<GameStatus>('하고싶음'); // 게임 상태, 기본값은 '하고싶음'
+  const [status, setStatus] = useState<GameStatus>('하는중'); // 게임 상태, 기본값은 '하는중'
   const [trailerUrls, setTrailerUrls] = useState<string[]>(['']); // 게임 트레일러 URL
   const [screenshots, setScreenshot] = useState<Screenshot[]>([]); // 업로드된 스크린샷 주소
   const [uploading, setUploading] = useState(false);
@@ -266,16 +266,23 @@ export default function NewGamePage() {
               )}
             </div>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
+            <div className="flex flex-col gap-1 text-sm text-stone-600">
               게임 스크린샷 (선택, 최대 24장 - {screenshots.length}/24)
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className={inputClass}
-                disabled={screenshots.length >= 24} />
-            </label>
+              <label
+                className={`border border-stone-200 rounded-lg px-3 py-2 text-sm text-center cursor-pointer hover:bg-stone-50 ${
+                  screenshots.length >= 24? 'bg-stone-100 text-stone-400 cursor-not-allowed' : ''
+                }`}
+              >
+                사진 선택하기
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className={inputClass}
+                  disabled={screenshots.length >= 24} />
+              </label>
+            </div>
             {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
             {screenshots.length > 0 && (
               <div className="flex gap-2 flex-wrap">
@@ -303,5 +310,5 @@ export default function NewGamePage() {
           </div>
         </form>
       </main>
-    );
-  }
+  );
+}

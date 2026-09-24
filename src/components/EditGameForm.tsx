@@ -7,7 +7,7 @@ import type { Game, GameStatus, Screenshot } from '@/types/game';
 import BackButton from '@/components/BackButton';
 
 // 입력칸에 공통으로 쓰는 스타일 (반복되는 클래스라 변수로 빼둠)
-const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200disables:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
+const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disables:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', "Mobile"];
 
 // 부모(수정 페이지)가 DB에서 가져온 기존 기록을 game이라는 prop으로 넘겨줌
@@ -265,16 +265,23 @@ export default function EditGameForm({ game }: { game: Game }) {
               )}
             </div>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
+            <div className="flex flex-col gap-1 text-sm text-stone-600">
               게임 스크린샷 (선택, 최대 24장 — {screenshots.length}/24)
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className={inputClass}
-                disabled={screenshots.length >= 24} />
-            </label>
+              <label
+                className={`border border-stone-200 rounded-lg px-3 py-2 text-sm text-center cursor-pointer hover:bg-stone-50 ${
+                  screenshots.length >= 24? 'bg-stone-100 text-stone-400 cursor-not-allowed' : ''
+                }`}
+              >
+                사진 선택하기
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className={inputClass}
+                  disabled={screenshots.length >= 24} />
+              </label>
+            </div>
             {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
             {screenshots.length > 0 && (
               <div className="flex gap-2 flex-wrap">
