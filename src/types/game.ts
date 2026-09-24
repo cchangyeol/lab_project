@@ -3,6 +3,12 @@
 // 게임 상태 네 가지 값
 export type GameStatus = '하고싶음' | '하는중' | '클리어' | '중단';
 
+// 스크린샷 하나 (사진 주소 + 그날 적은 메모)
+export interface Screenshot {
+  url: string;
+  note?: string;
+}
+
 // 게임 기록 하나의 데이터 모양
 export interface Game {
   _id?: string; // MongoDB에서 자동으로 생성되는 고유 ID
@@ -15,7 +21,7 @@ export interface Game {
   rating: number; // 게임 평점(1~5 사이의 값)
   status: GameStatus; // 게임 상태
   trailerUrls?: string[]; // 게임 트레일러 URL
-  screenshots?: string[]; // 업로드한 스크린샷 이미지 주소들
+  screenshots?: Screenshot[]; // 업로드한 스크린샷 이미지 주소들
 }
 
 

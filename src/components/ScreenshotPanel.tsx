@@ -4,18 +4,21 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Screenshot } from '@/types/game';
 
 const PER_PAGE = 6;
 
-export default function ScreenshotPanel({ gameId, screenshots }: { gameId: string; screenshots: string[] }) {
+export default function ScreenshotPanel({ gameId, screenshots }: { gameId: string; screenshots: Screenshot[] }) {
   const router = useRouter();
   const [page, setPage] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
 
   // 이미 올린 파일을 기억해서 중복 업로드를 막음
   const uploadedNamesRef = useRef<Set<string>>(new Set());
 
-  const totalPages = Math.max(1, Math.ceil(screenshots.length / PER_PAGE)); // 최소 1페이지
+  const totalPages = Math.max(2, Math.ceil(screenshots.length / PER_PAGE)); // 최소 1페이지
   const start = page * PER_PAGE;
   const current = screenshots.slice(start, start + PER_PAGE); // 현재 페이지에 보여줄 6장
 
@@ -24,7 +27,7 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   }
 
   // 서버에 스크린샷 목록을 새로 저장하는 공통 함수
-  async function saveScreenshots(next: string[]) {
+  async function saveScreenshots(next: Screenshot[]) {
     await fetch(`/api/games/${gameId}/screenshots`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -53,38 +56,50 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
     }
 
     setUploading(true);
-    const uploadedUrls: string[] =[];
+    const uploadedShots: Screenshot[] =[];
 
     for (const file of newFiles) {
       const form = new FormData();
       form.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: form });
       const data = await res.json();
-      uploadedUrls.push(data.url);
+      uploadedShots.push({ url: data.url });
     }
 
-    await saveScreenshots([...screenshots, uploadedUrls]);
+    await saveScreenshots([...screenshots, ...uploadedShots]);
     setUploading(false);
     e.target.value = '';
   }
 
   async function handleDeleteScreenshot(url: string) {
-    await saveScreenshots(screenshots.filter((u) => u !== url));
+    await saveScreenshots(screenshots.filter((s) => s.url !== url));
+  }
+
+  function openNote(shot: Screenshot) {
+    setSelectedUrl(shot.url);
+    setNoteDraft(shot.note ?? '');
+  }
+
+  async function handleSaveNote() {
+    const updated = screenshots.map((s) => (s.url === selectedUrl ? { ...s, note: noteDraft } : s));
+    await saveScreenshots(updated);
+    setSelectedUrl(null);
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="grid grid-cols-2 gap-3 flex-1">
         {current.length > 0 ? (
-          current.map((url) => (
-            <div key={url} className="relative group">
+          current.map((shot) => (
+            <div key={shot.url} className="relative group">
               <img
-                src={url}
+                src={shot.url}
                 alt="게임 스크린샷"
-                className="w-full aspect-square object-contain bg-stone-100 rounded-xl border border-stone-200 shadow-sm" />
+                onClick={() => openNote(shot)}
+                className="w-full object-contain bg-stone-100 rounded-xl border border-stone-200 shadow-sm" />
                 <button
                   type="button"
-                  onClick={() => handleDeleteScreenshot(url)}
+                  onClick={() => handleDeleteScreenshot(shot.url)}
                   className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                 >
                   x
@@ -117,6 +132,44 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
       </div>
 
       {uploading && <p className="text-xs text-stone-400 mt-2">업로드 중...</p>}
+
+      {selectedUrl && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedUrl(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-4 max-w-sm w-full flex flex-col gap-3"
+            onClick={(e) => e.stopPropagation()}>
+              <img
+                src={selectedUrl}
+                alt={"선택한 스크린샷"}
+                className="w-full rounded-xl" />
+
+                <textarea
+                  className="border border-stone-200 rounded-lg p-2 text-sm h-24 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                  placeholder="기록을 적어보세요."
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUrl(null)}
+                    className="text-sm text-stone-500 px-3 py-1.5">
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveNote}
+                      className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium"
+                    >
+                      저장
+                    </button>
+                </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

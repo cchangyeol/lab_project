@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Game, GameStatus } from '@/types/game';
+import type { Game, GameStatus, Screenshot } from '@/types/game';
 import BackButton from '@/components/BackButton';
 
 // 입력칸에 공통으로 쓰는 스타일 (반복되는 클래스라 변수로 빼둠)
@@ -25,8 +25,8 @@ export default function EditGameForm({ game }: { game: Game }) {
     const [status, setStatus] = useState<GameStatus>(game.status);
     const [trailerUrls, setTrailerUrls] = useState<string[]>(
       game.trailerUrls && game.trailerUrls.length > 0 ? game.trailerUrls : ['']
-    ); // 게임 트레일러 URLㄷ,ㄹ
-    const [screenshots, setScreenshot] = useState<string[]>(game.screenshots ?? []); // 업로드된 스크린샷 주소
+    ); // 게임 트레일러 URL들
+    const [screenshots, setScreenshot] = useState<Screenshot[]>(game.screenshots ?? []); // 업로드된 스크린샷 주소
     const [uploading, setUploading] = useState(false);
 
     // 파일을 고르면 하나씩 /api/upload로 올리고, 돌아온 주소를 screenshot에 쌓음
@@ -34,7 +34,7 @@ export default function EditGameForm({ game }: { game: Game }) {
       const files = e.target.files;
       if (!files || files.length === 0) return;
 
-      const remaining = 40 - screenshots.length;
+      const remaining = 24 - screenshots.length;
       if (remaining <= 0) {
         alert('스크린샷 한도 도달');
         e.target.value = '';
@@ -43,27 +43,27 @@ export default function EditGameForm({ game }: { game: Game }) {
 
       const filesToUpload = Array.from(files).slice(0, remaining);
         if (files.length > remaining) {
-          alert(`스크린샷은 최대 40개까지라 ${remaining}개만 업로드합니다.`);
+          alert(`스크린샷은 최대 24개까지라 ${remaining}개만 업로드합니다.`);
         }
 
       setUploading(true);
-      const uploadedUrls: string[] = [];
+      const uploadedShots: Screenshot[] = [];
 
       for (const file of filesToUpload) {
         const form = new FormData();
         form.append('file', file);
         const res = await fetch('/api/upload', { method: 'POST', body: form });
         const data = await res.json();
-        uploadedUrls.push(data.url);
+        uploadedShots.push({ url: data.url });
       }
 
-      setScreenshot((prev) => [...prev, ...uploadedUrls]);
+      setScreenshot((prev) => [...prev, ...uploadedShots]);
       setUploading(false);
       e.target.value = '';
     }
 
     function handleRemoveScreenshot(url: string) {
-      setScreenshot((prev) => prev.filter((u) => u !== url));
+      setScreenshot((prev) => prev.filter((s) => s.url !== url));
     }
 
     function handleTrailerChange(index: number, value: string) {
@@ -266,24 +266,24 @@ export default function EditGameForm({ game }: { game: Game }) {
             </div>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
-              게임 스크린샷 (선택, 최대 40장 — {screenshots.length}/40)
+              게임 스크린샷 (선택, 최대 24장 — {screenshots.length}/24)
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleFileChange}
                 className={inputClass}
-                disabled={screenshots.length >= 40} />
+                disabled={screenshots.length >= 24} />
             </label>
             {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
             {screenshots.length > 0 && (
               <div className="flex gap-2 flex-wrap">
-                {screenshots.map((url) => (
-                  <div key={url} className="relative">
-                    <img key={url} src={url} alt="스크린샷 미리보기" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+                {screenshots.map((shot) => (
+                  <div key={shot.url} className="relative">
+                    <img src={shot.url} alt="스크린샷 미리보기" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
                     <button
                       type="button"
-                      onClick={() => handleRemoveScreenshot(url)}
+                      onClick={() => handleRemoveScreenshot(shot.url)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-200 text-rose-900 text-xs leading-none flex items-center justify-center"
                     >
                       x

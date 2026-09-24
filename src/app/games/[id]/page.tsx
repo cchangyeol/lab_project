@@ -40,6 +40,10 @@ async function getGame(id: string): Promise<Game | null> {
   // id로 문서 하나 찾기
   if (!game) return null;
 
+  const screenshots = (game.screeshots ?? []).map((s: unknown) =>
+    typeof s === 'string' ? { url: s } : s
+  );
+
   return { ...game, _id: game._id.toString() } as Game;
 }
 
