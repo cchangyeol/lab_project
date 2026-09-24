@@ -6,6 +6,7 @@ import { useState } from 'react'; // 입력값을 상태로 관리하기 위해 
 import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화면으로 이동
 import type { GameStatus } from '@/types/game'; // 게임 상태 타입 가져옴
 import BackButton from '@/components/BackButton';
+import { upload } from '@vercel/blob/client';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', 'Mobile'];
@@ -123,7 +124,9 @@ export default function NewGamePage() {
 
   return (
         <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
-        <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
+        <form onSubmit={handleSubmit}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+          className="w-full max-w-md flex flex-col gap-4">
           <BackButton />
 
           {/* 등록 폼과 같은 흰 카드 스타일 */}
@@ -293,8 +296,10 @@ export default function NewGamePage() {
             )}
 
             <button
-              type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">
-              등록 완료
+              type="submit"
+              disabled={uploading}
+              className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              {uploading ? '업로드 중...' : '등록 완료'}
             </button>
           </div>
         </form>

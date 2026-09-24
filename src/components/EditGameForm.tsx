@@ -124,7 +124,9 @@ export default function EditGameForm({ game }: { game: Game }) {
 
     return (
       <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
-        <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
+        <form onSubmit={handleSubmit}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+          className="w-full max-w-md flex flex-col gap-4">
           <BackButton />
 
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col gap-4">
@@ -291,8 +293,11 @@ export default function EditGameForm({ game }: { game: Game }) {
               </div>
             )}
 
-            <button type="submit" className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2">
-              수정 완료
+            <button
+              type="submit"
+              disabled={uploading}
+              className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              {uploading ? '업로드 중...' : '수정 완료'}
             </button>
           </div>
         </form>
