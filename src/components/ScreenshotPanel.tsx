@@ -92,26 +92,34 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
 
   return (
     <div className="flex flex-col h-full">
-      <div className="columns-2 gap-3 flex-1">
+      <div className="flex gap-3 flex-1">
         {current.length > 0 ? (
-          current.map((shot) => (
-            <div key={shot.url} className="relative group mb-3 break-inside-avoid">
-              <img
-                src={shot.url}
-                alt="게임 스크린샷"
-                onClick={() => openNote(shot)}
-                className="w-full object-contain bg-stone-100 rounded-xl border border-stone-200 shadow-sm" />
-                <button
-                  type="button"
-                  onClick={() => handleDeleteScreenshot(shot.url)}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                >
-                  x
-                </button>
-              </div>
-          ))
+          [current.slice(0, Math.ceil(current.length / 2)),
+            current.slice(Math.ceil(current.length / 2))].map(
+              (column, colIndex) => (
+                <div key={colIndex} className="flex flex-col gap-3 flex-1">
+                  {column.map((shot) =>(
+                    <div key={shot.url} className="relative group mb-3 break-inside-avoid">
+                      <img
+                        src={shot.url}
+                        alt="게임 스크린샷"
+                        onClick={() => openNote(shot)}
+                        className="w-full rounded-xl border border-stone-200 shadow-sm cursor-pointer" />
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteScreenshot(shot.url)}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                        >
+                          x
+                        </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            )
         ) : (
-          <p className="col-span-2 tet-sm text-stone-400 self-center text-center">등록된 스크린샷이 없습니다.</p>
+          <p className="text-sm text-stone-400 text-center">등록된 스크린샷이 없습니다.</p>
         )}
       </div>
 

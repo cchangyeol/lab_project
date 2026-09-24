@@ -145,7 +145,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
                     <img
                       src={coverUrl}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover blur-sm scale-110"
+                      className="absolute inset-0 w-full h-full object-cover blur-sm"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   </>
