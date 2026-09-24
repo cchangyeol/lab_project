@@ -266,23 +266,16 @@ export default function NewGamePage() {
               )}
             </div>
 
-            <div className="flex flex-col gap-1 text-sm text-stone-600">
+            <label className="flex flex-col gap-1 text-sm text-stone-600">
               게임 스크린샷 (선택, 최대 24장 - {screenshots.length}/24)
-              <label
-                className={`border border-stone-200 rounded-lg px-3 py-2 text-sm text-center cursor-pointer hover:bg-stone-50 ${
-                  screenshots.length >= 24? 'bg-stone-100 text-stone-400 cursor-not-allowed' : ''
-                }`}
-              >
-                사진 선택하기
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileChange}
-                  className={inputClass}
-                  disabled={screenshots.length >= 24} />
-              </label>
-            </div>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className={inputClass}
+                disabled={screenshots.length >= 24} />
+            </label>
             {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
             {screenshots.length > 0 && (
               <div className="flex gap-2 flex-wrap">
@@ -310,5 +303,5 @@ export default function NewGamePage() {
           </div>
         </form>
       </main>
-  );
-}
+    );
+  }

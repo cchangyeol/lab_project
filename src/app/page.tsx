@@ -86,11 +86,11 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           name="q"
           placeholder="게임명으로 검색"
           defaultValue={searchParams.q ?? ''}
-          className="border border-stone-200 rounded-full px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
+          className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-sky-200"
         />
 
         <select name="status" defaultValue={searchParams.status ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
+        className="border border-stone-200 rounded-full px-3 py-1.5 font-medium text-sm text-stone-900">
           <option value="">상태 전체</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -98,7 +98,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <select name="platform" defaultValue={searchParams.platform ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
+        className="border border-stone-200 rounded-full px-3 py-1.5 font-medium text-sm text-stone-900">
           <option value="">플랫폼 전체</option>
           {platforms.map((p) => (
             <option key={p} value={p}>{p}</option>
@@ -106,7 +106,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <select name="genre" defaultValue={searchParams.genre ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
+        className="border border-stone-200 rounded-full px-3 py-1.5 font-medium text-sm text-stone-900">
           <option value="">장르 전체</option>
           {genres.map((g) => (
             <option key={g} value={g}>{g}</option>
@@ -114,7 +114,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </select>
 
         <select name="sort" defaultValue={searchParams.sort ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 text-sm text-stone-600">
+        className="border border-stone-200 rounded-full px-3 py-1.5 font-medium text-sm text-stone-900">
           <option value="">정렬: 기본</option>
           <option value="rating">평점 높은 순</option>
           <option value="title">이름 가나다순</option>
@@ -129,19 +129,52 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         <p className="text-stone-500">조건에 맞는 기록이 없습니다.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8">
-          {games.map((game) => (
-            <Link
-              key={game._id}
-              href={`/games/${game._id}`}
-              className="group relative bg-white rounded-2xl border border-stone-200 shadow-sm p-5 pt-7 flex flex-col gap-2 transition hover:-translate-y-1 hover:shadow-md"
-            >
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-3 rounded-b-md bg-stone-200 group-hover:bg-sky-200 transition" />
+          {games.map((game) => {
+            // 제일 먼저 등록한 스크린샷을 표지 사진으로 씀
+            const coverUrl = game.screenshots?.[0]?.url;
 
-              <span className="font-bold text-stone-800">{game.title}</span>
-              <span className="text-sm text-stone-500">{game.platform} · {game.genre}</span>
-              <span className={`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
-            </Link>
-          ))}
+            return (
+              <Link
+                key={game._id}
+                href={`/games/${game._id}`}
+                className="group relative rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col transition hover:-translate-y-1 hover:shadow-md aspect-[3/4]"
+              >
+                {/* 배경: 스크린샷 있으면 흐릿하게 깔고, 없으면 흰 배경 그대로 */}
+                {coverUrl ? (
+                  <>
+                    <img
+                      src={coverUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover blur-sm scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-white" />
+                )}
+
+                {/* 게임팩 위쪽 홈 느낌 */}
+                <div
+                  className={`absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-3 rounded-b-md transition ${
+                    coverUrl ? 'bg-white/40 group-hover:bg-sky-200' : 'bg-stone-200 group-hover:bg-sky-200'
+                  }`}
+                />
+
+                {/* 글자는 항상 카드 맨 아래에 붙임 */}
+                <div className="relative mt-auto p-4 flex flex-col gap-1.5">
+                  <span className={`font-bold ${coverUrl ? 'text-white drop-shadow' : 'text-stone-800'}`}>
+                    {game.title}
+                  </span>
+                  <span className={`text-sm ${coverUrl ? 'text-white/80 drop-shadow' : 'text-stone-500'}`}>
+                    {game.platform} · {game.genre}
+                  </span>
+                  <span className={`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>
+                    {game.status}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </main>
