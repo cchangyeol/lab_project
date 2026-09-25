@@ -166,7 +166,7 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
                 className="w-full rounded-xl" />
 
                 <textarea
-                  className="border border-stone-200 rounded-lg p-2 text-sm h-24 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                  className="border border-stone-200 rounded-lg p-2 text-sm text-stone-900 h-24 focus:outline-none focus:ring-2 focus:ring-sky-200"
                   placeholder="기록을 적어보세요."
                   value={noteDraft}
                   onChange={(e) => setNoteDraft(e.target.value)}

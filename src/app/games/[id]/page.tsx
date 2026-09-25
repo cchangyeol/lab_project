@@ -10,7 +10,7 @@ import ScreenshotPanel from '@/components/ScreenshotPanel';
 import GameConsoleCard from '@/components/GameConsoleCard';
 
 
-// 목록 화면과 같은 상태 배지 색 (파일이 달라서 똑같이 한 번 더 정의)
+// 목록 화면과 같은 상태 배지 색
 const STATUS_STYLES: Record<GameStatus, string> = {
   하고싶음: 'bg-sky-100 text-sky-700',
   하는중: 'bg-amber-100 text-amber-700',
@@ -44,7 +44,7 @@ async function getGame(id: string): Promise<Game | null> {
     typeof s === 'string' ? { url: s } : s
   );
 
-  return { ...game, _id: game._id.toString() } as Game;
+  return { ...game, _id: game._id.toString(), screenshots } as Game;
 }
 
 // 주소가 /games/abc123 이면 params.id 자리에 "abc123"이 들어옴
