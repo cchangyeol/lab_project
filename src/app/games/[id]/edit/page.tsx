@@ -13,6 +13,8 @@ async function getGame(id: string): Promise<Game | null> {
   const game = await db.collection('games').findOne({ _id: new ObjectId(id) });
   if (!game) return null;
 
+  const genres = Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [];
+
   return { ...game, _id: game._id.toString() } as Game;
 }
 

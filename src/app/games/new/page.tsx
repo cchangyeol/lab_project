@@ -5,6 +5,7 @@
 import { useState } from 'react'; // 입력값을 상태로 관리하기 위해 useState 훅 가져옴
 import { useRouter } from 'next/navigation'; // 저장 성공하면 다른 화면으로 이동
 import type { GameStatus, Screenshot } from '@/types/game'; // 게임 상태 타입 가져옴
+import { GENRE_OPTIONS } from '@/types/game';
 import BackButton from '@/components/BackButton';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
@@ -16,7 +17,7 @@ export default function NewGamePage() {
   // 폼에 입력한 값들을 저장해두는 state
   const [title, setTitle] = useState(''); // 게임제목
   const [platform, setPlatform] = useState(''); // 플렛폼
-  const [genre, setGenre] = useState('') // 장르
+  const [genres, setGenres] = useState<string[]>([]) // 장르
   const [startDate, setStartDate] = useState(''); // 시작일
   const [endDate, setEndDate] = useState(''); // 종료일
   const [playTime, setPlayTime] = useState(''); // 총 플레이 시간
@@ -25,6 +26,12 @@ export default function NewGamePage() {
   const [trailerUrls, setTrailerUrls] = useState<string[]>(['']); // 게임 트레일러 URL
   const [screenshots, setScreenshot] = useState<Screenshot[]>([]); // 업로드된 스크린샷 주소
   const [uploading, setUploading] = useState(false);
+
+  // 장르를 토글 형식으로 여러개 고를 수 있게 함
+  function toggleGenre(g: string) {
+    setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) :
+  [...prev, g]));
+  }
 
   // 파일을 고르면 하나씩 /api/upload로 올리고, 돌아온 주소를 screenshot에 쌓음
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -56,7 +63,7 @@ export default function NewGamePage() {
 
     setScreenshot((prev) => [...prev, ...uploadedShots]);
     setUploading(false);
-    e.target.value;
+    e.target.value = '';
   }
 
   // 스크린샷 목록에서 하나를 뺌
@@ -85,6 +92,11 @@ export default function NewGamePage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
 
+    if (genres.length === 0) {
+      alert('장르를 하나 이상 선택해주세요.');
+      return;
+    }
+
     // 마지막 플레이한 날이 시작일보다 빠르면 저장하지 않고 알림만 띄움
     if (endDate && endDate < startDate) {
       alert('적절한 날짜를 선택해주세요.');
@@ -105,7 +117,7 @@ export default function NewGamePage() {
       body: JSON.stringify({
         title,
         platform,
-        genre,
+        genres,
         startDate,
         playTime: playTimeNum,
         endDate,
@@ -156,15 +168,22 @@ export default function NewGamePage() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              장르
-              <input
-                type="text"
-                className={inputClass}
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                required />
-            </label>
+            <div className="flex flex-col gap-1 text-sm text-stone-600">
+              장르 (하나 이상 선택)
+              <div className="flex flex-wrap gap-2">
+                {GENRE_OPTIONS.map((g) => (
+                  <label
+                    key={g}
+                    className={`text-xs px-3 py-1.5 rounded-full border cursor-pointer transition ${
+                      genres.includes(g) ? 'bg-sky-200 border-sky-300 text-sky-900' : 'bg-white border-stone-200 text-stone-600'
+                    }`}
+                  >
+                    <input type="checkbox" checked={genres.includes(g)} onChange={() => toggleGenre(g)} className="hidden" />
+                    {g}
+                  </label>
+                ))}
+              </div>
+            </div>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               시작일
@@ -185,7 +204,7 @@ export default function NewGamePage() {
               </label>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
-              마지막으로 플레이한 날 (선택)
+              마지막으로 플레이한 날
               <input
                 type="date"
                 className={inputClass}

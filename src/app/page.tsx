@@ -2,13 +2,14 @@
 import Link from 'next/link'; // 카드를 누르면 다른 페이지로 이동시키는 링크 컴포넌트
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
 import type { Game, GameStatus } from '@/types/game'; // 게임 기록 타입
+import { GENRE_OPTIONS } from '@/types/game';
 
 
 type SearchParams = {
   q?: string;
   status?: string;
   platform?: string;
-  genre?: string;
+  genre?: string | string[];
   sort?: string;
 }
 
@@ -23,7 +24,10 @@ async function getGames(params: SearchParams): Promise<Game[]> {
   if (params.q) filter.title = { $regex: params.q, $options: 'i' };
   if (params.status) filter.status = params.status
   if (params.platform) filter.platform = params.platform;
-  if (params.genre) filter.genre = params.genre;
+
+  // 고른 장르 중 하나라도 겹치면 걸리게 함
+  const selectedGenres = Array.isArray(params.genre) ? params.genre : params.genre ? [params.genre] : [];
+if (selectedGenres.length > 0 ) filter.genres = { $in: selectedGenres };
 
   // 정렬 기준 고르기 (아무것도 안 고르면 정렬 안 함)
   let sort: Record<string, 1 | -1> = {};
@@ -36,6 +40,7 @@ async function getGames(params: SearchParams): Promise<Game[]> {
   return games.map((game) => ({
     ...game,
     _id: game._id.toString(),
+    genres: Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [],
   })) as Game[];
 }
 
@@ -45,9 +50,8 @@ async function getFilterOptions(){
   const db = client.db('game-log');
 
   const platforms = await db.collection('games').distinct('platform') // 중복 없이 값만 가져옴
-  const genres = await db.collection('games').distinct('genre');
 
-  return { platforms, genres };
+  return { platforms };
 }
 const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '하는중', '클리어', '중단'];
 
@@ -64,10 +68,17 @@ const STATUS_STYLES: Record<GameStatus, string> = {
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
 
   // 목록 데이터와 필터 옵션을 동시에 가져옴 (서로 가져올 필요 없이 같이 처리
-  const [games, { platforms, genres }] = await Promise.all([
+  const [games, { platforms }] = await Promise.all([
     getGames(searchParams),
     getFilterOptions(),
   ]);
+
+  // 새로고침해도 체크박스 상태가 유지되도록 현재 선택된 장르를 미리 계산
+  const selectedGenres = Array.isArray(searchParams.genre)
+  ? searchParams.genre
+  : searchParams.genre
+  ? [searchParams.genre]
+  : [];
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-amber-50 p-8">
@@ -105,13 +116,15 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           ))}
         </select>
 
-        <select name="genre" defaultValue={searchParams.genre ?? ''}
-        className="border border-stone-200 rounded-full px-3 py-1.5 font-medium text-sm text-stone-900">
-          <option value="">장르 전체</option>
-          {genres.map((g) => (
-            <option key={g} value={g}>{g}</option>
+        {/* 장르는 여러 개 고를 수 있어서 체크박스로 바꿈 (같은 name="genre"면 여러 개 체크해도 주소창에 다 담김) */}
+        <div className="flex flex-wrap gap-x-2 gap-y-1 items-center border border-stone-200 rounded-full px-3 py-1.5">
+          {GENRE_OPTIONS.map((g) => (
+            <label key={g} className="flex items-center gap-1 text-xs text-stone-600 whitespace-nowrap">
+              <input type="checkbox" name="genre" value={g} defaultChecked={selectedGenres.includes(g)} />
+              {g}
+            </label>
           ))}
-        </select>
+        </div>
 
         <select name="sort" defaultValue={searchParams.sort ?? ''}
         className="border border-stone-200 rounded-full px-3 py-1.5 font-medium text-sm text-stone-900">
@@ -144,7 +157,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
                     <img
                       src={coverUrl}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover scale-90"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   </>
@@ -163,7 +176,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
                     {game.title}
                   </span>
                   <span className={`text-sm ${coverUrl ? 'text-white/80 drop-shadow' : 'text-stone-500'}`}>
-                    {game.platform} · {game.genre}
+                    {game.platform} · {(game.genres ?? []).join(', ')}
                   </span>
                   <span className={`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>
                     {game.status}

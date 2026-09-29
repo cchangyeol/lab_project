@@ -2,11 +2,15 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Screenshot } from '@/types/game';
 
-const PER_PAGE = 6;
+const PAGE_WEIGHT = 6;
+const TALL_WEIGHT = 3;
+const WIDE_WEIGHT = 1;
+
+type Orientation = 'tall' | 'wide'
 
 export default function ScreenshotPanel({ gameId, screenshots }: { gameId: string; screenshots: Screenshot[] }) {
   const router = useRouter();
@@ -14,13 +18,61 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   const [uploading, setUploading] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [orientations, setOrientations] = useState<Record<string, Orientation>>({});
 
   // 이미 올린 파일을 기억해서 중복 업로드를 막음
   const uploadedNamesRef = useRef<Set<string>>(new Set());
 
-  const totalPages = Math.max(2, Math.ceil(screenshots.length / PER_PAGE)); // 최소 1페이지
-  const start = page * PER_PAGE;
-  const current = screenshots.slice(start, start + PER_PAGE); // 현재 페이지에 보여줄 6장
+  // 사진마다 세로로 긴 사진인지 미리 확인해서 orientation에 저장
+  useEffect(() => {
+    screenshots.forEach((shot) => {
+      if (orientations[shot.url]) return; // 이미 확인된 사진은 다시 안 함
+      const img = new Image();
+      img.onload = () => {
+        setOrientations((prev) => ({
+          ...prev,
+          [shot.url]: img.naturalHeight > img.naturalWidth ? 'tall' : 'wide',
+        }));
+      };
+      img.src = shot.url;
+    });
+  }, [screenshots]);
+
+  function weightOf(shot: Screenshot) {
+    return orientations[shot.url] === 'tall' ? TALL_WEIGHT : WIDE_WEIGHT;
+  }
+
+  // 사진들의 무게가 6이 안 넘게 페이지로 나눔 (세로 사진은 3칸으로 침)
+  const pages: Screenshot[][] = [];
+  let bucket: Screenshot[] = [];
+  let bucketWeight = 0;
+  for (const shot of screenshots) {
+    const w = weightOf(shot);
+    if (bucketWeight + w > PAGE_WEIGHT && bucket.length > 0) {
+      pages.push(bucket);
+      bucket = [];
+      bucketWeight = 0;
+    }
+    bucket.push(shot);
+    bucketWeight += w;
+  }
+  if (bucket.length > 0) pages.push(bucket);
+
+  const totalPages = Math.max(2, pages.length); // 최소 2페이지
+  const current =  pages[page] ?? []; // 현재 페이지에 보여줄 6장
+
+  // 현재 페이지 안에서 왼쪽 칸(무게 3) / 오른쪽 칸 (무게 3)으로 나눔
+  const left: Screenshot[] = [];
+  const right: Screenshot[] = [];
+  let leftWeight = 0;
+  for (const shot of current) {
+    if (leftWeight < TALL_WEIGHT) {
+      left.push(shot);
+      leftWeight += weightOf(shot);
+    } else {
+      right.push(shot);
+    }
+  }
 
   function handleNext() {
     setPage((p) => (p + 1) % totalPages); // 마지막 페이지 다음엔 다시 처음 페이지
@@ -79,6 +131,16 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
     await saveScreenshots(screenshots.filter((s) => s.url !== url));
   }
 
+  // 사진을 전체 목록 안에서 앞/뒤로 한 칸 옮김
+  function handleMove(url: string, direction: 'prev' | 'naxt') {
+    const idx = screenshots.findIndex((s) => s.url);
+    const swapIdx = direction === 'prev' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= screenshots.length) return;
+    const next = [...screenshots];
+    [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+    saveScreenshots(next);
+  }
+
   function openNote(shot: Screenshot) {
     setSelectedUrl(shot.url);
     setNoteDraft(shot.note ?? '');
@@ -90,36 +152,53 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
     setSelectedUrl(null);
   }
 
+  function renderShot(shot: Screenshot) {
+    return (
+      <div key={shot.url} className="relative group mb-3">
+        <img
+          src={shot.url}
+          alt="게임 스크린샷"
+          onClick={() => openNote(shot)}
+          className="w-full rounded-xl border border-stone-200 shadow-sm cursor-pointer"
+        />
+        <button
+          type="button"
+          onClick={() => handleDeleteScreenshot(shot.url)}
+          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+        >
+          x
+        </button>
+        {/* 순서 바꾸기 버튼 (마우스 올리면 나타남) */}
+        <div className="absolute bottom-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+          <button
+            type="button"
+            onClick={() => handleMove(shot.url, 'prev')}
+            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-600 text-xs flex items-center justify-center"
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMove(shot.url, 'naxt')}
+            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-600 text-xs flex items-center justify-center"
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex gap-3 flex-1">
         {current.length > 0 ? (
-          [current.slice(0, Math.ceil(current.length / 2)),
-            current.slice(Math.ceil(current.length / 2))].map(
-              (column, colIndex) => (
-                <div key={colIndex} className="flex flex-col gap-3 flex-1">
-                  {column.map((shot) =>(
-                    <div key={shot.url} className="relative group mb-3 break-inside-avoid">
-                      <img
-                        src={shot.url}
-                        alt="게임 스크린샷"
-                        onClick={() => openNote(shot)}
-                        className="w-full rounded-xl border border-stone-200 shadow-sm cursor-pointer" />
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteScreenshot(shot.url)}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                        >
-                          x
-                        </button>
-                    </div>
-                  ))}
-                </div>
-              )
-            )
+          <>
+            <div className="flex flex-col flex-1">{left.map(renderShot)}</div>
+            <div className="flex flex-col flex-1">{right.map(renderShot)}</div>
+          </>
         ) : (
-          <p className="text-sm text-stone-400 text-center">등록된 스크린샷이 없습니다.</p>
+          <p className="text-sm text-stone-400 text-center flex-1">등록된 스크린샷이 없습니다.</p>
         )}
       </div>
 
@@ -127,65 +206,49 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
         <button
           type="button"
           onClick={handlePrev}
-          className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50">
-            ←
+          className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50"
+        >
+          ←
         </button>
 
         <label className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50 cursor-pointer">
           +
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleAddPhotos}
-            className="hidden" />
+          <input type="file" accept="image/*" multiple onChange={handleAddPhotos} className="hidden" />
         </label>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50"
-          >
-              →
-          </button>
+        <button
+          type="button"
+          onClick={handleNext}
+          className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50"
+        >
+          →
+        </button>
       </div>
 
-      {uploading && <p className="text-xs text-stone-400 mt-2">업로드 중...</p>}
+      {uploading && <p className="text-xs text-stone-400 mt-2 text-center">업로드 중...</p>}
 
       {selectedUrl && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedUrl(null)}
-        >
-          <div
-            className="bg-white rounded-2xl p-4 max-w-sm w-full flex flex-col gap-3"
-            onClick={(e) => e.stopPropagation()}>
-              <img
-                src={selectedUrl}
-                alt={"선택한 스크린샷"}
-                className="w-full rounded-xl" />
-
-                <textarea
-                  className="border border-stone-200 rounded-lg p-2 text-sm text-stone-900 h-24 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                  placeholder="기록을 적어보세요."
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                />
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedUrl(null)}
-                    className="text-sm text-stone-500 px-3 py-1.5">
-                      취소
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveNote}
-                      className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium"
-                    >
-                      저장
-                    </button>
-                </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedUrl(null)}>
+          <div className="bg-white rounded-2xl p-4 max-w-sm w-full flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+            <img src={selectedUrl} alt="선택한 스크린샷" className="w-full rounded-xl" />
+            <textarea
+              className="border border-stone-200 rounded-lg p-2 text-sm text-stone-900 h-24 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              placeholder="기록을 적어보세요."
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+            />
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setSelectedUrl(null)} className="text-sm text-stone-500 px-3 py-1.5">
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveNote}
+                className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium"
+              >
+                저장
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Game, GameStatus, Screenshot } from '@/types/game';
+import { GENRE_OPTIONS } from '@/types/game';
 import BackButton from '@/components/BackButton';
 
 // 입력칸에 공통으로 쓰는 스타일 (반복되는 클래스라 변수로 빼둠)
@@ -17,7 +18,7 @@ export default function EditGameForm({ game }: { game: Game }) {
     // 빈 값이 아닌 기존 game 값으로 state를 초기화
     const [title, setTitle] = useState(game.title);
     const [platform, setPlatform] = useState(game.platform);
-    const [genre, setGenre] = useState(game.genre); // 장르
+    const [genres, setGenres] = useState<string[]>(game.genres ?? []); // 장르
     const [startDate, setStartDate] = useState(game.startDate);
     const [endDate, setEndDate] = useState(game.endDate ?? '');
     const [playTime, setPlayTime] = useState(String(game.playTime));
@@ -28,6 +29,10 @@ export default function EditGameForm({ game }: { game: Game }) {
     ); // 게임 트레일러 URL들
     const [screenshots, setScreenshot] = useState<Screenshot[]>(game.screenshots ?? []); // 업로드된 스크린샷 주소
     const [uploading, setUploading] = useState(false);
+
+    function toggleGenre(g: string) {
+      setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
+    }
 
     // 파일을 고르면 하나씩 /api/upload로 올리고, 돌아온 주소를 screenshot에 쌓음
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -85,6 +90,11 @@ export default function EditGameForm({ game }: { game: Game }) {
     async function handleSubmit(e: React.FormEvent) {
       e.preventDefault();
 
+      if (genres.length === 0) {
+        alert('장르를 하나 이상 선택해주세요.');
+        return;
+      }
+
       // 마지막 플레이한 날이 시작일보다 빠르면 저장하지 않고 알림만 띄움
       if (endDate && endDate < startDate) {
         alert('적절한 날짜를 선택해주세요.');
@@ -104,7 +114,7 @@ export default function EditGameForm({ game }: { game: Game }) {
         body: JSON.stringify({
           title,
           platform,
-          genre,
+          genres,
           startDate,
           endDate,
           playTime:playTimeNum,
@@ -156,15 +166,22 @@ export default function EditGameForm({ game }: { game: Game }) {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              장르
-              <input
-                type="text"
-                className={inputClass}
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                required />
-            </label>
+            <div className="flex flex-col gap-1 text-sm text-stone-600">
+              장르 (하나 이상 선택)
+              <div className="flex flex-wrap gap-2">
+                {GENRE_OPTIONS.map((g) => (
+                  <label
+                    key={g}
+                    className={`text-xs px-3 py-1.5 rounded-full border cursor-pointer transition ${
+                      genres.includes(g) ? 'bg-sky-200 border-sky-300 text-sky-900' : 'bg-white border-stone-200 text-stone-600'
+                    }`}
+                  >
+                    <input type="checkbox" checked={genres.includes(g)} onChange={() => toggleGenre(g)} className="hidden" />
+                    {g}
+                  </label>
+                ))}
+              </div>
+            </div>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               시작일

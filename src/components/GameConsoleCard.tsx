@@ -21,7 +21,9 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
 
         <div className="flex flex-wrap gap-2">
           <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.platform}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.genre}</span>
+        {game.genres?.map((g) => (
+          <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{g}</span>
+          ))}
           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
         </div>
 

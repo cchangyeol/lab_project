@@ -40,9 +40,11 @@ async function getGame(id: string): Promise<Game | null> {
   // id로 문서 하나 찾기
   if (!game) return null;
 
-  const screenshots = (game.screeshots ?? []).map((s: unknown) =>
+  const screenshots = (game.screenshots ?? []).map((s: unknown) =>
     typeof s === 'string' ? { url: s } : s
   );
+
+  const genres = Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [];
 
   return { ...game, _id: game._id.toString(), screenshots } as Game;
 }

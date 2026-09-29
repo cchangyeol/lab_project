@@ -9,12 +9,16 @@ export interface Screenshot {
   note?: string;
 }
 
+export const GENRE_OPTIONS = [
+  'RPG', '액션', '어드벤처', '시뮬레이션', '전략', '스포츠', '리듬', '퍼즐', '로그라이크', '소울', '오픈월드', '기타'
+]
+
 // 게임 기록 하나의 데이터 모양
 export interface Game {
   _id?: string; // MongoDB에서 자동으로 생성되는 고유 ID
   title: string; // 게임 제목
   platform: string; // 게임 플랫폼(PC, PS5, 닌텐도 Switch 등)
-  genre: string; // 장르 (예: RPG, rougelike, AOS, FPS 등)
+  genres: string[]; // 장르 (예: RPG, rougelike, AOS, FPS 등)
   startDate: string; // 시작일(YYYY-MM-DD 형식)
   endDate?: string; // 종료일(YYYY-MM-DD 형식)
   playTime: number; // 총 플레이 시간(시간 단위)
