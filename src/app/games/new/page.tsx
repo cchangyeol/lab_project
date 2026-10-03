@@ -10,6 +10,7 @@ import BackButton from '@/components/BackButton';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', 'Mobile'];
+const sectionTitleClass = 'text-xs font-semibold text-stone-400 uppercase tracking-wide';
 
 export default function NewGamePage() {
   const router = useRouter(); // 저장 성공하면 목록으로 보내는데 씀
@@ -135,38 +136,55 @@ export default function NewGamePage() {
   }
 
   return (
-      <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
-        <form onSubmit={handleSubmit}
-          onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
-          className="w-full max-w-md flex flex-col gap-4">
-          <BackButton />
+    <main className="min-h-screen bg-stone-50 p-8 flex justify-center">
+      <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} className="w-full max-w-md flex flex-col gap-4">
+        <BackButton />
 
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col gap-4">
-            <h1 className="text-xl font-bold text-stone-800">게임 기록 등록</h1>
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col gap-6">
+          <h1 className="text-xl font-bold text-stone-800">게임 기록 등록</h1>
+
+          <div className="flex flex-col gap-3">
+            <h2 className={sectionTitleClass}>기본 정보</h2>
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               게임명
-              <input
-                type="text"
-                className={inputClass}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required />
+              <input type="text" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} required />
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              플랫폼
-              <select
-                className={inputClass}
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                required>
-                <option value="">선택하세요</option>
-                {PLATFORM_OPTIONS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-sm text-stone-600">
+                플랫폼
+                <select className={inputClass} value={platform} onChange={(e) => setPlatform(e.target.value)} required>
+                  <option value="">선택하세요</option>
+                  {PLATFORM_OPTIONS.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm text-stone-600">
+                상태
+                <select
+                  className={inputClass}
+                  value={status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value as GameStatus;
+                    setStatus(newStatus);
+                    if (newStatus === '하고싶음') {
+                      setStartDate('');
+                      setEndDate('');
+                      setPlayTime('');
+                      setRating(0);
+                    }
+                  }}
+                >
+                  <option value="하고싶음">하고싶음</option>
+                  <option value="하는중">하는중</option>
+                  <option value="클리어">클리어</option>
+                  <option value="중단">중단</option>
+                </select>
+              </label>
+            </div>
 
             <div className="flex flex-col gap-1 text-sm text-stone-600">
               장르 (하나 이상 선택)
@@ -184,118 +202,73 @@ export default function NewGamePage() {
                 ))}
               </div>
             </div>
+          </div>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              시작일
-              {status === '하고싶음' ? (
-                <input
-                  type="text"
-                  className={inputClass}
-                  value="출시 예정"
-                  disabled />
-              ) : (
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  required />
+          <div className="flex flex-col gap-3 border-t border-stone-100 pt-5">
+            <h2 className={sectionTitleClass}>날짜 · 플레이 정보</h2>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-sm text-stone-600">
+                시작일
+                {status === '하고싶음' ? (
+                  <input type="text" className={inputClass} value="출시 예정" disabled />
+                ) : (
+                  <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
                 )}
               </label>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              마지막으로 플레이한 날
-              <input
-                type="date"
-                className={inputClass}
-                min={startDate}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                disabled={status === '하고싶음'} />
-            </label>
+              <label className="flex flex-col gap-1 text-sm text-stone-600">
+                마지막 플레이 (선택)
+                <input type="date" className={inputClass} min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={status === '하고싶음'} />
+              </label>
+            </div>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              플레이 시간 (시간 단위)
-              <input
-                type="number"
-                min={0}
-                className={inputClass}
-                value={playTime}
-                onChange={(e) => setPlayTime(e.target.value)}
-                disabled={status === '하고싶음'}
-                required={status !== '하고싶음'} />
-            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-sm text-stone-600">
+                플레이 시간 (시간)
+                <input type="number" min={0} className={inputClass} value={playTime} onChange={(e) => setPlayTime(e.target.value)} disabled={status === '하고싶음'} required={status !== '하고싶음'} />
+              </label>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              평점 (1점 ~ 5점)
-              <input
-                type="number"
-                min={1}
-                max={5}
-                className={inputClass}
-                value={rating === 0 ? '' : rating}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
-                }}
-                disabled={status === '하고싶음'}
-                required={status !== '하고싶음'} />
-            </label>
+              <label className="flex flex-col gap-1 text-sm text-stone-600">
+                평점 (1~5점)
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  className={inputClass}
+                  value={rating === 0 ? '' : rating}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
+                  }}
+                  disabled={status === '하고싶음'}
+                  required={status !== '하고싶음'}
+                />
+              </label>
+            </div>
+          </div>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              상태
-              <select
-                className={inputClass}
-                value={status}
-                onChange={(e) => {
-                  const newStatus = e.target.value as GameStatus;
-                  setStatus(newStatus);
-                  if (newStatus === '하고싶음') {
-                    setStartDate('');
-                    setEndDate('');
-                    setPlayTime('');
-                    setRating(0);
-                  }
-                }}>
-                <option value="하고싶음">하고싶음</option>
-                <option value="하는중">하는중</option>
-                <option value="클리어">클리어</option>
-                <option value="중단">중단</option>
-              </select>
-            </label>
-
-            <div className="flex flex-col gap-2 text-sm text-stone-600">
-              트레일러 유튜브 링크 (최대 3개)
+          <div className="flex flex-col gap-3 border-t border-stone-100 pt-5">
+            <h2 className={sectionTitleClass}>트레일러 (최대 3개)</h2>
+            <div className="flex flex-col gap-2">
               {trailerUrls.map((url, i) => (
                 <div key={i} className="flex gap-2">
-                  <input
-                    type="url"
-                    className={`${inputClass} flex-1`}
-                    value={url}
-                    onChange={(e) => handleTrailerChange(i, e.target.value)} />
-                    {trailerUrls.length > 1 && (
-                      <button type="button" onClick={() => handleRemoveTrailer(i)}
-                      className="text-rose-600 text-sm px-2">삭제</button>
-                    )}
+                  <input type="url" className={`${inputClass} flex-1`} value={url} onChange={(e) => handleTrailerChange(i, e.target.value)} />
+                  {trailerUrls.length > 1 && (
+                    <button type="button" onClick={() => handleRemoveTrailer(i)} className="text-rose-600 text-sm px-2">삭제</button>
+                  )}
                 </div>
               ))}
               {trailerUrls.length < 3 && (
-                <button type="button" onClick={handleAddTrailer}
-                className="self-start text-sky-600 text-sm underline">+ 트레일러 추가</button>
+                <button type="button" onClick={handleAddTrailer} className="self-start text-sky-600 text-sm underline">+ 트레일러 추가</button>
               )}
             </div>
+          </div>
 
-            <label className="flex flex-col gap-1 text-sm text-stone-600">
-              게임 스크린샷 (선택, 최대 24장 - {screenshots.length}/24)
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className={inputClass}
-                disabled={screenshots.length >= 24} />
-            </label>
-            {uploading && <p className="text-xs text-stone-400"> 업로드 중...</p>}
+          <div className="flex flex-col gap-3 border-t border-stone-100 pt-5">
+            <h2 className={sectionTitleClass}>스크린샷 (선택, 최대 24장 — {screenshots.length}/24)</h2>
+            <input type="file" accept="image/*" multiple onChange={handleFileChange} className={inputClass} disabled={screenshots.length >= 24} />
+            {uploading && <p className="text-xs text-stone-400">업로드 중...</p>}
             {screenshots.length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 {screenshots.map((shot) => (
@@ -312,15 +285,17 @@ export default function NewGamePage() {
                 ))}
               </div>
             )}
-
-            <button
-              type="submit"
-              disabled={uploading}
-              className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2 text-sm font-medium transition mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
-              {uploading ? '업로드 중...' : '등록 완료'}
-            </button>
           </div>
-        </form>
-      </main>
-    );
-  }
+
+          <button
+            type="submit"
+            disabled={uploading}
+            className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {uploading ? '업로드 중...' : '등록 완료'}
+          </button>
+        </div>
+      </form>
+    </main>
+  );
+}

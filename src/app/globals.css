@@ -25,3 +25,18 @@ body {
     text-wrap: balance;
   }
 }
+
+@keyframes cd-pop {
+  0% {
+    tramsform: scale(0) rorate(0deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08) rotate(540deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(720deg);
+    opacity: 1;
+  }
+}
