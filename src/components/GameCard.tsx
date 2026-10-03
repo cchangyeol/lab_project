@@ -23,7 +23,7 @@ export default function GameCard({ game }: { game: Game }) {
 
     // 애니메이션이 끝나는 타이밍(0.65초)에 맞춰 상세 화면으로 이동
     setTimeout(() => {
-      router.push(`/game/${game.id}`);
+      router.push(`/games/${game._id}`);
     }, 650)
   }
 
