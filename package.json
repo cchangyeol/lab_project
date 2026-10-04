@@ -9,11 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@vercel/blob": "^2.8.0",
-    "next": "14.2.35",
-    "react": "^18",
-    "react-dom": "^18"
-  },
+  "@vercel/blob": "^2.8.0",
+  "mongodb": "^7.6.0",
+  "next": "14.2.35",
+  "react": "^18",
+  "react-dom": "^18"
+},
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
