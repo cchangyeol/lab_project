@@ -9,7 +9,7 @@ import { GENRE_OPTIONS } from '@/types/game';
 import BackButton from '@/components/BackButton';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
-const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', 'Mobile'];
+const PLATFORM_OPTIONS = ['PC', 'PS5', 'Switch', 'Mobile', '기타'];
 const sectionTitleClass = 'text-xs font-semibold text-stone-400 uppercase tracking-wide';
 
 export default function NewGamePage() {
