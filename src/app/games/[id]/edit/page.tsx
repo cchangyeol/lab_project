@@ -15,7 +15,7 @@ async function getGame(id: string): Promise<Game | null> {
 
   const genres = Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [];
 
-  return { ...game, _id: game._id.toString() } as Game;
+  return { ...game, _id: game._id.toString(), genres } as Game;
 }
 
 export default async function EditGamePage({ params }: { params: { id: string }}) {
