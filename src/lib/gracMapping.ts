@@ -20,7 +20,7 @@ const GENRE_MAP: Record<string, string> = {
 // GRAC 플랫폼 이름 -> 우리 플랫폼 옵션 이름
 const PLATFORM_MAP: Record<string, string> = {
   'PC/온라인 게임': 'PC',
-  '모바일': '모바일',
+  '모바일': 'Mobile',
 };
 
 // 매칭되는 게 없으면 전부 '기타'로 처리

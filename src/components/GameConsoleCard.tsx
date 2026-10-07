@@ -1,12 +1,6 @@
 // 게임 정보 + 트레일러를 콘솔 화면처럼 보여주는 부품
-import type { Game, GameStatus } from '@/types/game';
-
-const STATUS_STYLES: Record<GameStatus, string> = {
-  하고싶음: 'bg-sky-100 text-sky-700',
-  하는중: 'bg-amber-100 text-amber-700',
-  클리어: 'bg-emerald-100 text-emerald-700',
-  중단: 'bg-rose-100 text-rose-700',
-};
+import type { Game } from '@/types/game';
+import { STATUS_STYLES } from '@/types/game';
 
 export default function GameConsoleCard({ game, trailerIds }: { game: Game; trailerIds: string[] }) {
   return (
@@ -38,14 +32,18 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
               <dd>{game.endDate}</dd>
             </div>
           )}
-          <div className="flex justify-between">
-            <dt>플레이 시간</dt>
-            <dd>{game.playTime}시간</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>평점</dt>
-            <dd>{game.rating} / 5</dd>
-          </div>
+          {game.status !== '하고싶음' && (
+            <>
+              <div className="flex justify-between">
+                <dt>플레이 시간</dt>
+                <dd>{game.playTime}시간</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>평점</dt>
+                <dd>{game.rating} / 5</dd>
+              </div>
+            </>
+          )}
         </dl>
 
         {trailerIds.length > 0 && (

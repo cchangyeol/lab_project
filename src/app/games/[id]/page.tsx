@@ -3,11 +3,14 @@ import { ObjectId } from 'mongodb'; // MongoDB에서 문서를 id로 찾을 때 
 import { notFound } from 'next/navigation'; // id에 해당하는 기록이 없을 때 404 화면 보여주기
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
 import type { Game } from '@/types/game'; // 게임 기록 타입
+import { normalizeGame } from '@/lib/normalizeGame';
 import DeleteGameButton from '@/components/DeleteGameButton'; // 삭제 버튼
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import ScreenshotPanel from '@/components/ScreenshotPanel';
 import GameConsoleCard from '@/components/GameConsoleCard';
+
+const YOUTUBE_HOSTNAMES = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com']);
 
 // 트레일러 링크에서 유튜브 영상 id만 뽑아내는 함수
 function getYoutubeId(url: string): string | null {
@@ -16,7 +19,10 @@ function getYoutubeId(url: string): string | null {
     if (parsed.hostname === 'youtu.be') {
       return parsed.pathname.slice(1); // youtu.be/영상id 형태에서 맨 앞 슬래시(/)만 뗀다.
     }
-    return parsed.searchParams.get('v'); // watch?v=영상id 형태에서 v 파라미터를 가져온다.
+    if (YOUTUBE_HOSTNAMES.has(parsed.hostname)) {
+      return parsed.searchParams.get('v'); // watch?v=영상id 형태에서 v 파라미터를 가져온다.
+    }
+    return null; // 유튜브 주소가 아니면 임베드하지 않음
   } catch {
     return null; // 주소가 이상하면 링크가 없는 걸로 처리
   }
@@ -24,6 +30,8 @@ function getYoutubeId(url: string): string | null {
 
 // 서버에서 실행되는 함수라 DB에 바로 접근 가능
 async function getGame(id: string): Promise<Game | null> {
+  if (!ObjectId.isValid(id)) return null; // 형식이 안 맞는 id면 DB까지 안 가고 바로 없는 걸로 처리
+
   const client = await clientPromise;
   const db = client.db('game-log');
 
@@ -31,13 +39,7 @@ async function getGame(id: string): Promise<Game | null> {
   // id로 문서 하나 찾기
   if (!game) return null;
 
-  const screenshots = (game.screenshots ?? []).map((s: unknown) =>
-    typeof s === 'string' ? { url: s } : s
-  );
-
-  const genres = Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [];
-
-  return { ...game, _id: game._id.toString(), screenshots, genres } as Game;
+  return normalizeGame(game);
 }
 
 // 주소가 /games/abc123 이면 params.id 자리에 "abc123"이 들어옴

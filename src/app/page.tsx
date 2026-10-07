@@ -3,8 +3,16 @@ import Link from 'next/link'; // 카드를 누르면 다른 페이지로 이동�
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
 import type { Game, GameStatus } from '@/types/game'; // 게임 기록 타입
 import { GENRE_OPTIONS } from '@/types/game';
+import { normalizeGame } from '@/lib/normalizeGame';
 import GameCard from '@/components/GameCard'; // 게임 기록 카드 컴포넌트
+import LogoutButton from '@/components/LogoutButton';
 
+
+// 검색어에 정규식 특수문자(., *, (, ? 등)가 들어있으면 그대로 문자로 취급하게 함
+// (안 하면 "잘못된 정규식"으로 $regex 조회 자체가 에러를 던짐)
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 type SearchParams = {
   q?: string;
@@ -22,7 +30,7 @@ async function getGames(params: SearchParams): Promise<Game[]> {
 
   // 값이 있는 조건만 필터에 추가 (없으면 그 조건은 무시)
   const filter: Record<string, unknown> = {};
-  if (params.q) filter.title = { $regex: params.q, $options: 'i' };
+  if (params.q) filter.title = { $regex: escapeRegExp(params.q), $options: 'i' };
   if (params.status) filter.status = params.status
   if (params.platform) filter.platform = params.platform;
 
@@ -38,11 +46,7 @@ if (selectedGenres.length > 0 ) filter.genres = { $in: selectedGenres };
 
   const games = await db.collection('games').find(filter).sort(sort).toArray();
 
-  return games.map((game) => ({
-    ...game,
-    _id: game._id.toString(),
-    genres: Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [],
-  })) as Game[];
+  return games.map(normalizeGame); // 옛 데이터(문자열 스크린샷, genre 하나뿐 등)도 같은 방식으로 변환
 }
 
 // 필터 드롭다운에 쓸 플랫폼/장르 목록을 DB에 실제로 저장된 값들에서 뽑아온다
@@ -57,7 +61,7 @@ async function getFilterOptions(){
 const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '하는중', '클리어', '중단'];
 
 // select 박스 공통 스타일
-const selectClass = 'appearance-none bg-stone-50 border border-stone-200 rounded-xl pl-3 pr-7 py-2 text-sm font-medium text-stone-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focusborder-sky-300 transition cursor-pointer';
+const selectClass = 'appearance-none bg-stone-50 border border-stone-200 rounded-xl pl-3 pr-7 py-2 text-sm font-medium text-stone-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-300 transition cursor-pointer';
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   // 목록 데이터와 필터 옵션을 동시에 가져옴 (서로 가져올 필요 없이 같이 처리
@@ -77,12 +81,15 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-amber-50 p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-stone-800">게임 기록</h1>
-        <Link
-          href="/games/new"
-          className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-5 py-2.5 text-sm font-semibold transition"
-        >
-          + 새 기록
-        </Link>
+        <div className="flex items-center gap-4">
+          <LogoutButton />
+          <Link
+            href="/games/new"
+            className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-5 py-2.5 text-sm font-semibold transition"
+          >
+            + 새 기록
+          </Link>
+        </div>
       </div>
 
       <form method="get" className="mb-8 bg-white border border-stone-200 rounded-2xl shadow-sm p-4 flex flex-col gap-3">
@@ -144,7 +151,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
                 key={g}
                 className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-stone-200 bg-stone-50 text-stone-600 has-[:checked]:bg-sky-200 has-[:checked]:border-sky-300 has-[:checked]:text-sky-900 cursor-pointer transition"
               >
-                <input type="checkbox" name="genre" value={g} defaultChecked={selectedGenres.includes(g)} className="hidden" />
+                <input type="checkbox" name="genre" value={g} defaultChecked={selectedGenres.includes(g)} className="sr-only" />
                 {g}
               </label>
             ))}
