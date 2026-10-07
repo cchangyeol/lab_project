@@ -33,5 +33,11 @@ export function sanitizeGameInput(body: unknown): Omit<Game, '_id'> | null {
     status: b.status as GameStatus,
     trailerUrls: Array.isArray(b.trailerUrls) ? b.trailerUrls.filter((u): u is string => typeof u === 'string') : [],
     screenshots,
+    coverImage: typeof b.coverImage === 'string' ? b.coverImage : undefined,
+    summary: typeof b.summary === 'string' ? b.summary : undefined,
+    metacritic: typeof b.metacritic === 'number' && !Number.isNaN(b.metacritic) ? b.metacritic : undefined,
+    developers: Array.isArray(b.developers) ? b.developers.filter((d): d is string => typeof d === 'string') : undefined,
+    publishers: Array.isArray(b.publishers) ? b.publishers.filter((p): p is string => typeof p === 'string') : undefined,
+    price: typeof b.price === 'string' ? b.price : undefined,
   };
 }
