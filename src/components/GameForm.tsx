@@ -8,8 +8,38 @@ import type { Game, GameStatus, Screenshot } from '@/types/game';
 import { GENRE_OPTIONS, PLATFORM_OPTIONS } from '@/types/game';
 import { mapGracGenre, mapGracPlatform } from '@/lib/gracMapping'; // GRAC에서 가져온 장르/플랫폼을 내부 값으로 바꿔주는 함수
 import type { GracItem } from '@/lib/gracMapping';
+import { matchRawgGenres, matchRawgPlatform } from '@/lib/rawgMapping';
 import BackButton from '@/components/BackButton';
 import { checkImage, uploadImage } from '@/lib/uploadImage';
+
+// /api/rawg/search 결과 하나
+interface RawgSearchResult {
+  id: number;
+  name: string;
+  released: string | null;
+  backgroundImage: string | null;
+  platforms: string[];
+}
+
+// /api/rawg/[id] 응답
+interface RawgGameDetail {
+  title: string;
+  released: string | null;
+  coverImage: string | null;
+  summary: string;
+  metacritic: number | null;
+  platforms: string[];
+  genreTerms: string[];
+  developers: string[];
+  publishers: string[];
+  screenshots: string[];
+}
+
+// /api/steam 응답의 result
+interface SteamInfo {
+  price: string | null;
+  trailerUrl: string | null;
+}
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const sectionTitleClass = 'text-xs font-semibold text-stone-400 uppercase tracking-wide';
@@ -34,11 +64,103 @@ export default function GameForm({ game }: { game?: Game }) {
   const [uploading, setUploading] = useState(false);
   const pendingFiles = useRef<Map<string, File>>(new Map()); // 미리보기 주소 → 아직 안 올린 파일
 
+  // RAWG/Steam에서 가져온 선택 정보 (등록할 때만 채움)
+  const [coverImage, setCoverImage] = useState(game?.coverImage ?? '');
+  const [summary, setSummary] = useState(game?.summary ?? '');
+  const [metacritic, setMetacritic] = useState<number | undefined>(game?.metacritic);
+  const [developers, setDevelopers] = useState<string[]>(game?.developers ?? []);
+  const [publishers, setPublishers] = useState<string[]>(game?.publishers ?? []);
+  const [price, setPrice] = useState(game?.price ?? '');
+
   // 게임물관리위원회(GRAC) 검색 관련 상태 (등록할 때만 사용)
   const [gracQuery, setGracQuery] = useState('');
   const [gracResults, setGracResults] = useState<GracItem[]>([]);
   const [gracSearching, setGracSearching] = useState(false);
   const [gracError, setGracError] = useState('');
+
+  // RAWG/Steam 검색 관련 상태 (등록할 때만 사용)
+  const [rawgQuery, setRawgQuery] = useState('');
+  const [rawgResults, setRawgResults] = useState<RawgSearchResult[]>([]);
+  const [rawgSearching, setRawgSearching] = useState(false);
+  const [rawgApplyingId, setRawgApplyingId] = useState<number | null>(null);
+  const [rawgError, setRawgError] = useState('');
+
+  // "검색" 버튼을 눌렀을 때만 호출됨
+  async function handleRawgSearch() {
+    if (!rawgQuery.trim()) return;
+    setRawgSearching(true);
+    setRawgError('');
+    try {
+      const res = await fetch(`/api/rawg/search?q=${encodeURIComponent(rawgQuery.trim())}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? '검색에 실패했습니다.');
+      setRawgResults(data.results ?? []);
+    } catch (err) {
+      setRawgError((err as Error).message);
+    } finally {
+      setRawgSearching(false);
+    }
+  }
+
+  // 검색 결과 중 하나를 고르면 RAWG 상세 정보 + Steam 가격/트레일러를 같이 받아와 폼에 채움
+  async function applyRawgItem(item: RawgSearchResult) {
+    setRawgApplyingId(item.id);
+    setRawgError('');
+    try {
+      const [detailRes, steamRes] = await Promise.all([
+        fetch(`/api/rawg/${item.id}`),
+        fetch(`/api/steam?title=${encodeURIComponent(item.name)}`),
+      ]);
+
+      const detail: RawgGameDetail = await detailRes.json();
+      if (!detailRes.ok) throw new Error((detail as unknown as { error?: string }).error ?? 'RAWG 상세 정보를 가져오지 못했습니다.');
+
+      const steamData = steamRes.ok ? await steamRes.json() : { result: null };
+      const steamInfo: SteamInfo | null = steamData.result ?? null;
+
+      setTitle(detail.title);
+
+      const matchedPlatform = matchRawgPlatform(detail.platforms);
+      if (matchedPlatform) setPlatform(matchedPlatform);
+
+      const matchedGenres = matchRawgGenres(detail.genreTerms);
+      if (matchedGenres.length > 0) {
+        setGenres((prev) => Array.from(new Set([...prev, ...matchedGenres])));
+      }
+
+      if (detail.released && status !== '하고싶음') setStartDate(detail.released);
+      if (detail.coverImage) setCoverImage(detail.coverImage);
+      if (detail.summary) setSummary(detail.summary);
+      if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
+      if (detail.developers.length > 0) setDevelopers(detail.developers);
+      if (detail.publishers.length > 0) setPublishers(detail.publishers);
+
+      if (detail.screenshots.length > 0) {
+        const remaining = 24 - screenshots.length;
+        if (remaining > 0) {
+          const added = detail.screenshots.slice(0, remaining).map((url) => ({ url }));
+          setScreenshot((prev) => [...prev, ...added]);
+        }
+      }
+
+      if (steamInfo?.price) setPrice(steamInfo.price);
+      if (steamInfo?.trailerUrl) {
+        const trailerUrl = steamInfo.trailerUrl;
+        setTrailerUrls((prev) => {
+          const filled = prev.filter((u) => u.trim() !== '');
+          if (filled.includes(trailerUrl) || filled.length >= 3) return prev;
+          return [...filled, trailerUrl];
+        });
+      }
+
+      setRawgResults([]);
+      setRawgQuery('');
+    } catch (err) {
+      setRawgError((err as Error).message);
+    } finally {
+      setRawgApplyingId(null);
+    }
+  }
 
   // "검색" 버튼을 눌렀을 때만 호출됨
   async function handleGracSearch() {
@@ -184,6 +306,12 @@ export default function GameForm({ game }: { game?: Game }) {
         status,
         trailerUrls: trailerUrls.filter((u) => u.trim() !== ''),
         screenshots: await uploadPending(),
+        coverImage: coverImage || undefined,
+        summary: summary || undefined,
+        metacritic,
+        developers: developers.length > 0 ? developers : undefined,
+        publishers: publishers.length > 0 ? publishers : undefined,
+        price: price || undefined,
       };
 
       res = await fetch(isEdit ? `/api/games/${game!._id}` : '/api/games', {
@@ -256,6 +384,71 @@ export default function GameForm({ game }: { game?: Game }) {
                       </div>
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isEdit && (
+            <div className="flex flex-col gap-2 border-b border-stone-100 pb-5">
+              <h2 className={sectionTitleClass}>RAWG/Steam 정보로 채우기 (선택)</h2>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="게임명으로 검색"
+                  value={rawgQuery}
+                  onChange={(e) => setRawgQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleRawgSearch(); } }}
+                  className={`${inputClass} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={handleRawgSearch}
+                  disabled={rawgSearching}
+                  className="bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg px-4 text-sm font-medium transition disabled:opacity-50"
+                >
+                  {rawgSearching ? '검색 중...' : '검색'}
+                </button>
+              </div>
+              {rawgError && <p className="text-xs text-rose-500">{rawgError}</p>}
+              {rawgResults.length > 0 && (
+                <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
+                  {rawgResults.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => applyRawgItem(item)}
+                      disabled={rawgApplyingId !== null}
+                      className="flex items-center gap-3 text-left border border-stone-200 rounded-lg p-2 text-xs hover:bg-sky-50 transition disabled:opacity-50"
+                    >
+                      {item.backgroundImage && (
+                        <img src={item.backgroundImage} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <div className="font-semibold text-stone-800">{item.name}</div>
+                        <div className="text-stone-500">
+                          {item.released ?? '출시일 미상'} · {item.platforms.join(', ') || '플랫폼 미상'}
+                        </div>
+                      </div>
+                      {rawgApplyingId === item.id && <span className="text-stone-400">불러오는 중...</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {coverImage && (
+                <div className="flex gap-3 items-start border border-stone-200 rounded-lg p-3">
+                  <img src={coverImage} alt="" className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />
+                  <div className="text-xs text-stone-500 flex flex-col gap-0.5">
+                    <div className="flex gap-2">
+                      {metacritic !== undefined && <span>메타크리틱 {metacritic}</span>}
+                      {price && <span>{price}</span>}
+                    </div>
+                    {(developers.length > 0 || publishers.length > 0) && (
+                      <span>{[...developers, ...publishers].join(' · ')}</span>
+                    )}
+                    {summary && <p className="text-stone-400 line-clamp-3">{summary}</p>}
+                  </div>
                 </div>
               )}
             </div>

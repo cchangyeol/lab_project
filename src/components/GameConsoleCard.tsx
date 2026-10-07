@@ -11,6 +11,10 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
           <span className="text-xs text-stone-400 tracking-wide">POWER ON</span>
         </div>
 
+        {game.coverImage && (
+          <img src={game.coverImage} alt="" className="w-full aspect-video object-cover rounded-xl" />
+        )}
+
         <h1 className="text-xl font-bold text-stone-800">{game.title}</h1>
 
         <div className="flex flex-wrap gap-2">
@@ -19,7 +23,17 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
           <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{g}</span>
           ))}
           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
+          {typeof game.metacritic === 'number' && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">메타크리틱 {game.metacritic}</span>
+          )}
+          {game.price && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{game.price}</span>
+          )}
         </div>
+
+        {(game.developers?.length || game.publishers?.length) ? (
+          <p className="text-xs text-stone-400">{[...(game.developers ?? []), ...(game.publishers ?? [])].join(' · ')}</p>
+        ) : null}
 
         <dl className="text-sm text-stone-600 flex flex-col gap-1 mt-1">
           <div className="flex justify-between">
@@ -45,6 +59,8 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
             </>
           )}
         </dl>
+
+        {game.summary && <p className="text-sm text-stone-500">{game.summary}</p>}
 
         {trailerIds.length > 0 && (
           <div className="flex flex-col gap-2 mt-2">
