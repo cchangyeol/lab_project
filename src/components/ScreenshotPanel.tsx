@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Screenshot } from '@/types/game';
+import { checkImage, uploadImage } from '@/lib/uploadImage';
 
 const PAGE_WEIGHT = 6;
 const TALL_WEIGHT = 3;
@@ -128,19 +129,22 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
       const uploadedShots: Screenshot[] = [];
 
       for (const file of newFiles) {
-        const form = new FormData();
-        form.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: form });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          alert(data.error ?? '업로드에 실패했습니다.');
+        const problem = checkImage(file);
+        if (problem) {
+          alert(problem);
           continue;
         }
 
-        const data = await res.json();
-        uploadedShots.push({ url: data.url });
-        uploadedFilesRef.current.set(`${file.name}_${file.size}`, data.url); // 성공한 파일만 중복 체크 목록에 기록
+        let url: string;
+        try {
+          url = await uploadImage(file);
+        } catch (error) {
+          alert(`업로드에 실패했습니다: ${(error as Error).message}`);
+          continue; // 실패한 파일은 건너뛰고 나머지는 계속 올림
+        }
+
+        uploadedShots.push({ url });
+        uploadedFilesRef.current.set(`${file.name}_${file.size}`, url); // 성공한 파일만 중복 체크 목록에 기록
       }
 
       if (uploadedShots.length > 0) {

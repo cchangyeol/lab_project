@@ -2,13 +2,14 @@
 // (등록 폼과 수정 폼이 거의 똑같아서 하나로 합쳐서 둘 다 고칠 때 한 곳만 고치면 되게 함)
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Game, GameStatus, Screenshot } from '@/types/game';
 import { GENRE_OPTIONS, PLATFORM_OPTIONS } from '@/types/game';
 import { mapGracGenre, mapGracPlatform } from '@/lib/gracMapping'; // GRAC에서 가져온 장르/플랫폼을 내부 값으로 바꿔주는 함수
 import type { GracItem } from '@/lib/gracMapping';
 import BackButton from '@/components/BackButton';
+import { checkImage, uploadImage } from '@/lib/uploadImage';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const sectionTitleClass = 'text-xs font-semibold text-stone-400 uppercase tracking-wide';
@@ -31,6 +32,7 @@ export default function GameForm({ game }: { game?: Game }) {
   );
   const [screenshots, setScreenshot] = useState<Screenshot[]>(game?.screenshots ?? []);
   const [uploading, setUploading] = useState(false);
+  const pendingFiles = useRef<Map<string, File>>(new Map()); // 미리보기 주소 → 아직 안 올린 파일
 
   // 게임물관리위원회(GRAC) 검색 관련 상태 (등록할 때만 사용)
   const [gracQuery, setGracQuery] = useState('');
@@ -73,51 +75,62 @@ export default function GameForm({ game }: { game?: Game }) {
     setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   }
 
-  // 파일을 고르면 하나씩 /api/upload로 올리고, 돌아온 주소를 screenshot에 쌓음
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // 파일을 고르면 바로 올리지 않고 미리보기(blob: 주소)만 만들어 둠
+  // 실제 업로드는 저장 버튼을 눌렀을 때 함 → 올려놓고 저장 안 하고 나가도 Blob에 파일이 안 남음
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const remaining = 24 - screenshots.length; // 몇 개 더 업로드 가능한지
+    const remaining = 24 - screenshots.length; // 몇 개 더 추가 가능한지
     if (remaining <= 0) {
       alert('스크린샷 한도 도달');
       e.target.value = '';
       return;
     }
 
-    const filesToUpload = Array.from(files).slice(0, remaining);
     if (files.length > remaining) {
-      alert(`스크린샷은 최대 24개까지라 ${remaining}개만 업로드합니다.`);
+      alert(`스크린샷은 최대 24개까지라 ${remaining}개만 추가합니다.`);
     }
 
-    setUploading(true);
-    try {
-      const uploadedShots: Screenshot[] = [];
-
-      for (const file of filesToUpload) {
-        const form = new FormData();
-        form.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: form });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          alert(data.error ?? '업로드에 실패했습니다.');
-          continue; // 실패한 파일은 건너뛰고 나머지는 계속 올림
-        }
-
-        const data = await res.json();
-        uploadedShots.push({ url: data.url });
+    const added: Screenshot[] = [];
+    for (const file of Array.from(files).slice(0, remaining)) {
+      const problem = checkImage(file);
+      if (problem) {
+        alert(problem);
+        continue; // 못 올리는 파일은 건너뛰고 나머지는 추가
       }
-
-      setScreenshot((prev) => [...prev, ...uploadedShots]);
-    } finally {
-      setUploading(false); // 중간에 에러가 나도 업로드 중 표시가 계속 남지 않게 함
-      e.target.value = '';
+      const previewUrl = URL.createObjectURL(file);
+      pendingFiles.current.set(previewUrl, file);
+      added.push({ url: previewUrl });
     }
+
+    setScreenshot((prev) => [...prev, ...added]);
+    e.target.value = '';
   }
 
   function handleRemoveScreenshot(url: string) {
+    if (pendingFiles.current.delete(url)) URL.revokeObjectURL(url); // 아직 안 올린 파일이면 미리보기만 정리
     setScreenshot((prev) => prev.filter((s) => s.url !== url));
+  }
+
+  // 미리보기로만 있던 사진을 Blob에 올리고 진짜 주소로 바꾼 목록을 돌려줌
+  // 올라간 건 바로 state에도 반영해서, 저장이 실패해 다시 눌러도 같은 파일을 또 올리지 않게 함
+  // ponytail: 업로드 후 저장 자체가 실패하고 그대로 나가면 그 파일은 Blob에 남음 — 문제되면 서버에 정리 API 추가
+  async function uploadPending(): Promise<Screenshot[]> {
+    const result: Screenshot[] = [];
+    for (const shot of screenshots) {
+      const file = pendingFiles.current.get(shot.url);
+      if (!file) {
+        result.push(shot);
+        continue;
+      }
+      const url = await uploadImage(file);
+      pendingFiles.current.delete(shot.url);
+      URL.revokeObjectURL(shot.url);
+      setScreenshot((prev) => prev.map((s) => (s.url === shot.url ? { ...s, url } : s)));
+      result.push({ ...shot, url });
+    }
+    return result;
   }
 
   function handleTrailerChange(index: number, value: string) {
@@ -157,24 +170,33 @@ export default function GameForm({ game }: { game?: Game }) {
       return;
     }
 
-    const payload = {
-      title,
-      platform,
-      genres,
-      startDate,
-      endDate,
-      playTime: playTimeNum,
-      rating,
-      status,
-      trailerUrls: trailerUrls.filter((u) => u.trim() !== ''),
-      screenshots,
-    };
+    setUploading(true);
+    let res: Response;
+    try {
+      const payload = {
+        title,
+        platform,
+        genres,
+        startDate,
+        endDate,
+        playTime: playTimeNum,
+        rating,
+        status,
+        trailerUrls: trailerUrls.filter((u) => u.trim() !== ''),
+        screenshots: await uploadPending(),
+      };
 
-    const res = await fetch(isEdit ? `/api/games/${game!._id}` : '/api/games', {
-      method: isEdit ? 'PUT' : 'POST', // 새로 만드는 게 아니라 기존 문서를 바꾸는 거면 PUT
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+      res = await fetch(isEdit ? `/api/games/${game!._id}` : '/api/games', {
+        method: isEdit ? 'PUT' : 'POST', // 새로 만드는 게 아니라 기존 문서를 바꾸는 거면 PUT
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      alert(`업로드에 실패했습니다: ${(error as Error).message}`);
+      return;
+    } finally {
+      setUploading(false); // 중간에 에러가 나도 업로드 중 표시가 계속 남지 않게 함
+    }
 
     if (res.ok) {
       if (isEdit) {
