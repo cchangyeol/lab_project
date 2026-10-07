@@ -36,13 +36,5 @@ export interface Game {
   status: GameStatus; // 게임 상태
   trailerUrls?: string[]; // 게임 트레일러 URL
   screenshots?: Screenshot[]; // 업로드한 스크린샷 이미지 주소들
-
-  // 아래는 RAWG/Steam에서 가져오는 정보들 (선택, 직접 입력하지 않음)
-  coverImage?: string; // RAWG 커버 이미지 주소
-  summary?: string; // RAWG 게임 소개글
-  metacritic?: number; // RAWG 메타크리틱 점수 (0~100)
-  developers?: string[]; // 개발사
-  publishers?: string[]; // 퍼블리셔
-  price?: string; // Steam 판매 가격 (예: "무료", "₩32,000")
 }
 

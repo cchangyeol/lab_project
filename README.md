@@ -29,11 +29,6 @@
 - 스크린샷마다 그날의 기록을 남기는 메모 기능
 - 세로로 긴 스크린샷은 더 큰 비중으로 배치되는 자동 레이아웃
 
-### 외부 API 자동 완성 (등록 화면, 선택)
-- 게임물관리위원회(GRAC): 게임명으로 검색해 플랫폼·장르 자동 채움
-- RAWG: 게임명으로 검색해 커버 이미지·스크린샷·장르·플랫폼·출시일·메타크리틱 점수·소개글·개발사·퍼블리셔 자동 채움
-- Steam: RAWG에서 고른 게임과 같은 이름으로 Steam 상점을 찾아 가격·트레일러 영상 자동 채움
-
 ### 디자인
 - 메인 목록은 게임팩(CD 케이스) 컨셉의 카드로, 클릭하면 CD가 회전하며 열리는 애니메이션과 함께 상세 화면으로 이동
 - 상세 화면은 콘솔 화면 + 사진첩을 펼친 듯한 2단 레이아웃
@@ -54,14 +49,6 @@ interface Game {
   status: '하고싶음' | '하는중' | '클리어' | '중단';
   trailerUrls?: string[];
   screenshots?: { url: string; note?: string }[];
-
-  // RAWG/Steam에서 가져오는 선택 정보
-  coverImage?: string;
-  summary?: string;
-  metacritic?: number;
-  developers?: string[];
-  publishers?: string[];
-  price?: string;
 }
 ```
 
@@ -77,10 +64,7 @@ src/
 │  │  ├─ games/route.ts                       # 등록 (POST)
 │  │  ├─ games/[id]/route.ts                  # 수정·삭제 (PUT/DELETE)
 │  │  ├─ games/[id]/screenshots/route.ts      # 스크린샷만 갱신 (PATCH)
-│  │  ├─ upload/route.ts                      # 이미지 업로드 허가 토큰 발급 (POST)
-│  │  ├─ game-search/route.ts                 # GRAC 검색 (GET)
-│  │  ├─ rawg/search/route.ts, rawg/[id]/route.ts  # RAWG 검색/상세 (GET)
-│  │  └─ steam/route.ts                       # Steam 가격·트레일러 (GET)
+│  │  └─ upload/route.ts                      # 이미지 업로드 (POST)
 │  └─ games/
 │     ├─ new/page.tsx                         # 등록 화면 (GameForm 사용)
 │     └─ [id]/page.tsx, [id]/edit/page.tsx    # 상세 화면 · 수정 화면 (GameForm 사용)
@@ -88,13 +72,7 @@ src/
 ├─ lib/
 │  ├─ mongodb.ts                              # DB 연결
 │  ├─ normalizeGame.ts                        # DB 문서 → Game 타입 변환 (옛 데이터 호환)
-│  ├─ validateGame.ts                         # 등록/수정 요청 입력값 검증
-│  ├─ session.ts                              # 로그인 쿠키 토큰 서명/검증
-│  ├─ uploadImage.ts                          # 브라우저 → Blob 직접 업로드 공통 로직
-│  ├─ gracMapping.ts                          # GRAC 장르/플랫폼 → 내부 값 매핑
-│  ├─ rawgMapping.ts                          # RAWG 장르/플랫폼 → 내부 값 매핑
-│  ├─ rawg.ts                                 # RAWG API 호출
-│  └─ steam.ts                                # Steam API 호출
+│  └─ validateGame.ts                         # 등록/수정 요청 입력값 검증
 ├─ middleware.ts                              # 기록을 바꾸는 요청에 로그인 여부 확인
 └─ types/game.ts                              # 타입 정의
 ```
@@ -110,10 +88,7 @@ MONGODB_URI=여기에_MongoDB_Atlas_연결_문자열
 BLOB_READ_WRITE_TOKEN=여기에_Vercel_Blob_토큰
 ADMIN_PASSWORD=기록을_등록·수정·삭제할_때_쓸_비밀번호
 SESSION_SECRET=로그인_쿠키_서명용_임의_문자열(openssl rand -hex 32 로 생성)
-RAWG_API_KEY=여기에_RAWG_API_키(https://rawg.io/apidocs 에서 무료 발급)
 ```
-
-RAWG_API_KEY가 없으면 등록 화면의 "RAWG/Steam 정보로 채우기" 검색만 동작하지 않고, 나머지 기능에는 영향이 없습니다.
 
 ### 2. 설치 및 실행
 
@@ -138,4 +113,4 @@ npm run dev
 ## 참고 사항
 
 - 회원가입이나 다중 사용자 권한 구분은 없고, 쓰기 작업 전체를 비밀번호 하나로만 보호합니다.
-- 등록 화면에서 GRAC/RAWG/Steam 검색으로 정보를 자동으로 채울 수 있지만, 어디까지나 선택 사항이고 모든 값은 저장 전에 직접 수정할 수 있습니다.
+- 외부 API를 통한 자동 데이터 수집 없이, 사용자가 직접 입력한 정보만 다룹니다.
