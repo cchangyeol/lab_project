@@ -35,7 +35,7 @@ export interface SteamInfo {
 
 // 제목으로 Steam 상점에서 가장 비슷한 게임을 찾아 가격 + 트레일러를 가져옴
 export async function findSteamInfo(title: string): Promise<SteamInfo | null> {
- const searchUrl = `${STEAM_SEARCH_URL}? term=${encodeURIComponent(title)}&l=korean&cc=kr`;
+ const searchUrl = `${STEAM_SEARCH_URL}?term=${encodeURIComponent(title)}&l=korean&cc=kr`;
  const searchRes = await fetch(searchUrl);
  if (!searchRes.ok) return null;
 

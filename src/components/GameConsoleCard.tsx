@@ -38,7 +38,7 @@ export default function GameConsoleCard({ game, trailerUrls }: { game: Game; tra
         <div className="flex flex-wrap gap-2">
           <span className="text-xs px-2 py-0.5 rounded-full bg-white text-stone-600 border border-stone-200">{game.platform}</span>
           {typeof game.metacritic === 'number' && (
-            <span className="text-xs px py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">메타크리틱 {game.metacritic}</span>)}
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">메타크리틱 {game.metacritic}</span>)}
             {game.price && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{game.price}</span>
             )}
@@ -53,14 +53,14 @@ export default function GameConsoleCard({ game, trailerUrls }: { game: Game; tra
           ) : null}
 
           <dl className="text-sm text-stone-600 flex flex-col gap-1 mt-1">
-            <div className="flex justify-between">
-              <dt>시작일</dt>
-              {game.releaseDate && (
+            {game.releaseDate && (
                 <div className="flex justify-between">
                   <dt>공식 출시일</dt>
                   <dd>{game.releaseDate}</dd>
                 </div>
               )}
+            <div className="flex justify-between">
+              <dt>시작일</dt>
               <dd>{game.status === '하고싶음' ? '출시 예정' : game.startDate}</dd>
             </div>
             {game.endDate && (
