@@ -26,6 +26,7 @@ export function sanitizeGameInput(body: unknown): Omit<Game, '_id'> | null {
     title: b.title,
     platform: b.platform,
     genres: b.genres.filter((g): g is string => typeof g === 'string'),
+    releaseDate: typeof b.releaseDate === 'string' ? b.releaseDate : undefined,
     startDate: b.startDate,
     endDate: typeof b.endDate === 'string' ? b.endDate : undefined,
     playTime: b.playTime,

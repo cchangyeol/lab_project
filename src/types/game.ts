@@ -29,6 +29,7 @@ export interface Game {
   title: string; // 게임 제목
   platform: string; // 게임 플랫폼(PC, PS5, 닌텐도 Switch 등)
   genres: string[]; // 장르 (예: RPG, rougelike, AOS, FPS 등)
+  releaseDate?: string;
   startDate: string; // 시작일(YYYY-MM-DD 형식)
   endDate?: string; // 종료일(YYYY-MM-DD 형식)
   playTime: number; // 총 플레이 시간(시간 단위)

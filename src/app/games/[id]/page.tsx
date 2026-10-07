@@ -10,23 +10,6 @@ import BackButton from '@/components/BackButton';
 import ScreenshotPanel from '@/components/ScreenshotPanel';
 import GameConsoleCard from '@/components/GameConsoleCard';
 
-const YOUTUBE_HOSTNAMES = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com']);
-
-// 트레일러 링크에서 유튜브 영상 id만 뽑아내는 함수
-function getYoutubeId(url: string): string | null {
-  try {
-    const parsed = new URL(url); // 주소를 분석하기 쉬운 형태로 바꾼다
-    if (parsed.hostname === 'youtu.be') {
-      return parsed.pathname.slice(1); // youtu.be/영상id 형태에서 맨 앞 슬래시(/)만 뗀다.
-    }
-    if (YOUTUBE_HOSTNAMES.has(parsed.hostname)) {
-      return parsed.searchParams.get('v'); // watch?v=영상id 형태에서 v 파라미터를 가져온다.
-    }
-    return null; // 유튜브 주소가 아니면 임베드하지 않음
-  } catch {
-    return null; // 주소가 이상하면 링크가 없는 걸로 처리
-  }
-}
 
 // 서버에서 실행되는 함수라 DB에 바로 접근 가능
 async function getGame(id: string): Promise<Game | null> {
@@ -50,11 +33,6 @@ export default async function GameDetailPage({ params }: { params: { id: string 
     notFound(); // 못 찾으면 Next.js 기본 404 화면을 보여준다
   }
 
-  const trailerIds = (game.trailerUrls ?? [])
-    .filter((url): url is string => Boolean(url))
-    .map((url) => getYoutubeId(url))
-    .filter((id): id is string => Boolean(id));
-
   // 스크린샷을 배치
   const screenshots = game.screenshots ?? [];
 
@@ -65,7 +43,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
       {/* 사진첩을 펼쳐놓은 것처럼 왼쪽 정보 / 오른쪽 사진 2단 구성 */}
       <div className="max-w-6xl mx-auto bg-white border-2 border-stone-300 rounded-3xl shadow-md md:flex overflow-hidden min-h-[520px]">
         <div className="p-8 md:w-1/2">
-          <GameConsoleCard game={game} trailerIds={trailerIds} />
+          <GameConsoleCard game={game} trailerUrls={game.trailerUrls ?? []} />
 
           <div className="flex gap-2 mt-4 ml-4">
             <Link

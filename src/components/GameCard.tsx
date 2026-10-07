@@ -10,7 +10,7 @@ import { STATUS_STYLES } from '@/types/game';
 export default function GameCard({ game }: { game: Game }) {
   const router = useRouter();
   const [opening, setOpening] = useState(false); // 열리는 애니메이션 중인지
-  const coverUrl = game.screenshots?.[0]?.url;
+  const coverUrl = game.coverImage ?? game.screenshots?.[0]?.url;
 
   // 그냥 왼쪽 클릭이면 CD 열리는 애니메이션을 보여주고 애니메이션이 끝난 뒤 이동
   // 새 탭으로 열기(Ctrl/Cmd/가운데 클릭)는 Link 기본 동작을 그대로 두어서 동작하게 함

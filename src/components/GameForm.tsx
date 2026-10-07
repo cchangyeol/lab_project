@@ -50,6 +50,7 @@ export default function GameForm({ game }: { game?: Game }) {
   const [title, setTitle] = useState(game?.title ?? '');
   const [platform, setPlatform] = useState(game?.platform ?? '');
   const [genres, setGenres] = useState<string[]>(game?.genres ?? []);
+  const [releaseDate, setReleaseDate] = useState(game?.releaseDate ?? '');
   const [startDate, setStartDate] = useState(game?.startDate ?? '');
   const [endDate, setEndDate] = useState(game?.endDate ?? '');
   const [playTime, setPlayTime] = useState(game ? String(game.playTime) : '');
@@ -120,7 +121,7 @@ export default function GameForm({ game }: { game?: Game }) {
         setGenres((prev) => Array.from(new Set([...prev, ...matchedGenres])));
       }
 
-      if (detail.released && status !== '하고싶음') setStartDate(detail.released);
+      if (detail.released) setReleaseDate(detail.released);
       if (detail.coverImage) setCoverImage(detail.coverImage);
       if (detail.summary) setSummary(detail.summary);
       if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
@@ -259,6 +260,7 @@ export default function GameForm({ game }: { game?: Game }) {
         title,
         platform,
         genres,
+        releaseDate: releaseDate || undefined,
         startDate,
         endDate,
         playTime: playTimeNum,
@@ -317,7 +319,7 @@ export default function GameForm({ game }: { game?: Game }) {
                   value={rawgQuery}
                   onChange={(e) => setRawgQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleRawgSearch(); } }}
-                  className={`${inputClass} flex-1`}
+                  className={`${inputClass} flex-1 text-stone-800`}
                 />
                 <button
                   type="button"
@@ -359,6 +361,7 @@ export default function GameForm({ game }: { game?: Game }) {
                   <img src={coverImage} alt="" className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />
                   <div className="text-xs text-stone-500 flex flex-col gap-0.5">
                     <div className="flex gap-2">
+                      {releaseDate && <span>출시일 {releaseDate}</span>}
                       {metacritic !== undefined && <span>메타크리틱 {metacritic}</span>}
                       {price && <span>{price}</span>}
                     </div>

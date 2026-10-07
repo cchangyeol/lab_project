@@ -56,7 +56,8 @@ export async function findSteamInfo(title: string): Promise<SteamInfo | null> {
 
  // movies 중 첫번째 트레일러의 영상 주소를 가져옴
  const firstMovie = appData.movies?.[0];
- const trailerUrl = firstMovie?.mp4?.max ?? firstMovie?.webm?.max ?? null;
+ const rawTrailerUrl = firstMovie?.mp4?.max ?? firstMovie?.webm?.max ?? null;
+ const trailerUrl = rawTrailerUrl ? rawTrailerUrl.replace(/^http:\/\//, 'https://') : null;
 
  return { price, trailerUrl };
 }

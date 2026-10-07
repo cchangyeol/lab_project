@@ -2,7 +2,24 @@
 import type { Game } from '@/types/game';
 import { STATUS_STYLES } from '@/types/game';
 
-export default function GameConsoleCard({ game, trailerIds }: { game: Game; trailerIds: string[] }) {
+const YOUTUBE_HOSTNAMES = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com']);
+
+function getYoutubeId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1);
+    if (YOUTUBE_HOSTNAMES.has(parsed.hostname)) return parsed.searchParams.get('v');
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function isDirectVideoUrl(url: string): boolean {
+  return /\.(mp4|webm)(\?.*)?$/i.test(url);
+}
+
+export default function GameConsoleCard({ game, trailerUrls }: { game: Game; trailerUrls: string[] }) {
   return (
     <div className="rounded-3xl border-4 border-stone-200 bg-white p-1.5 shadow-md">
       <div className="rounded-2xl bg-sky-50 p-6 flex flex-col gap-3">
@@ -38,6 +55,12 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
           <dl className="text-sm text-stone-600 flex flex-col gap-1 mt-1">
             <div className="flex justify-between">
               <dt>시작일</dt>
+              {game.releaseDate && (
+                <div className="flex justify-between">
+                  <dt>공식 출시일</dt>
+                  <dd>{game.releaseDate}</dd>
+                </div>
+              )}
               <dd>{game.status === '하고싶음' ? '출시 예정' : game.startDate}</dd>
             </div>
             {game.endDate && (
@@ -62,14 +85,21 @@ export default function GameConsoleCard({ game, trailerIds }: { game: Game; trai
 
           {game.summary && <p className="text-sm text-stone-500">{game.summary}</p>}
 
-          {trailerIds.length > 0 && (
+          {trailerUrls.length > 0 && (
             <div className="flex flex-col gap-2 mt-2">
-              {trailerIds.map((id) => (
-                <iframe key={id} className="w-full aspect-video rounded-xl" src={`https://www.youtube.com/embed/${id}`} title="트레일러" allowFullScreen />
-              ))}
+              {trailerUrls.map((url) => {
+                const youtubeId = getYoutubeId(url);
+                if (youtubeId) {
+                  return <iframe key={url} className="w-full aspect-video rounded-xl" src={`https://www.youtube.com/embed/${youtubeId}`} title="트레일러" allowFullScreen />;
+                }
+                if (isDirectVideoUrl(url)) {
+                  return <video key={url} className="w-full aspect-video rounded-xl" src={url} controls />;
+                }
+                return null;
+              })}
             </div>
           )}
-        </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
