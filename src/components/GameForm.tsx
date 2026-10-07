@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Game, GameStatus, Screenshot } from '@/types/game';
 import { GENRE_OPTIONS, PLATFORM_OPTIONS } from '@/types/game';
+import { mapGracGenre, mapGracPlatform } from '@/lib/gracMapping'; // GRAC에서 가져온 장르/플랫폼을 내부 값으로 바꿔주는 함수
+import type { GracItem } from '@/lib/gracMapping';
 import BackButton from '@/components/BackButton';
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
@@ -29,6 +31,43 @@ export default function GameForm({ game }: { game?: Game }) {
   );
   const [screenshots, setScreenshot] = useState<Screenshot[]>(game?.screenshots ?? []);
   const [uploading, setUploading] = useState(false);
+
+  // 게임물관리위원회(GRAC) 검색 관련 상태 (등록할 때만 사용)
+  const [gracQuery, setGracQuery] = useState('');
+  const [gracResults, setGracResults] = useState<GracItem[]>([]);
+  const [gracSearching, setGracSearching] = useState(false);
+  const [gracError, setGracError] = useState('');
+
+  // "검색" 버튼을 눌렀을 때만 호출됨
+  async function handleGracSearch() {
+    if (!gracQuery.trim()) return;
+    setGracSearching(true);
+    setGracError('');
+    try {
+      const res = await fetch(`/api/game-search?title=${encodeURIComponent(gracQuery.trim())}`);
+      const data = await res.json();
+      if (data.error) {
+        setGracError(data.error);
+        setGracResults([]);
+      } else {
+        setGracResults(data.items ?? []);
+      }
+    } finally {
+      setGracSearching(false);
+    }
+  }
+
+  // "이 정보 사용하기"를 눌렀을 때만 폼에 채워짐
+  function applyGracItem(item: GracItem) {
+    setTitle(item.gametitle);
+    if (item.platform) setPlatform(mapGracPlatform(item.platform));
+    if (item.genre) {
+      const mapped = mapGracGenre(item.genre);
+      setGenres((prev) => (prev.includes(mapped) ? prev : [...prev, mapped]));
+    }
+    setGracResults([]);
+    setGracQuery('');
+  }
 
   function toggleGenre(g: string) {
     setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -157,6 +196,48 @@ export default function GameForm({ game }: { game?: Game }) {
 
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col gap-6">
           <h1 className="text-xl font-bold text-stone-800">{isEdit ? '게임 기록 수정' : '게임 기록 등록'}</h1>
+
+          {!isEdit && (
+            <div className="flex flex-col gap-2 border-b border-stone-100 pb-5">
+              <h2 className={sectionTitleClass}>게임물관리위원회 공식 정보로 채우기 (선택)</h2>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="게임명으로 검색"
+                  value={gracQuery}
+                  onChange={(e) => setGracQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleGracSearch(); } }}
+                  className={`${inputClass} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={handleGracSearch}
+                  disabled={gracSearching}
+                  className="bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg px-4 text-sm font-medium transition disabled:opacity-50"
+                >
+                  {gracSearching ? '검색 중...' : '검색'}
+                </button>
+              </div>
+              {gracError && <p className="text-xs text-rose-500">{gracError}</p>}
+              {gracResults.length > 0 && (
+                <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
+                  {gracResults.map((item, i) => (
+                    <button
+                      type="button"
+                      key={`${item.gametitle}-${i}`}
+                      onClick={() => applyGracItem(item)}
+                      className="text-left border border-stone-200 rounded-lg p-2 text-xs hover:bg-sky-50 transition"
+                    >
+                      <div className="font-semibold text-stone-800">{item.gametitle}</div>
+                      <div className="text-stone-500">
+                        {item.entname} · {item.genre || '장르 미상'} · {item.platform || '플랫폼 미상'} · {item.givenrate}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             <h2 className={sectionTitleClass}>기본 정보</h2>
