@@ -2,21 +2,12 @@
 import { ObjectId } from 'mongodb'; // MongoDB에서 문서를 id로 찾을 때 쓰는 특수 id 타입
 import { notFound } from 'next/navigation'; // id에 해당하는 기록이 없을 때 404 화면 보여주기
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
-import type { Game, GameStatus } from '@/types/game'; // 게임 기록 타입
+import type { Game } from '@/types/game'; // 게임 기록 타입
 import DeleteGameButton from '@/components/DeleteGameButton'; // 삭제 버튼
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import ScreenshotPanel from '@/components/ScreenshotPanel';
 import GameConsoleCard from '@/components/GameConsoleCard';
-
-
-// 목록 화면과 같은 상태 배지 색
-const STATUS_STYLES: Record<GameStatus, string> = {
-  하고싶음: 'bg-sky-100 text-sky-700',
-  하는중: 'bg-amber-100 text-amber-700',
-  클리어: 'bg-emerald-100 text-emerald-700',
-  중단: 'bg-rose-100 text-rose-700',
-};
 
 // 트레일러 링크에서 유튜브 영상 id만 뽑아내는 함수
 function getYoutubeId(url: string): string | null {
@@ -46,7 +37,7 @@ async function getGame(id: string): Promise<Game | null> {
 
   const genres = Array.isArray(game.genres) ? game.genres : game.genre ? [game.genre] : [];
 
-  return { ...game, _id: game._id.toString(), screenshots } as Game;
+  return { ...game, _id: game._id.toString(), screenshots, genres } as Game;
 }
 
 // 주소가 /games/abc123 이면 params.id 자리에 "abc123"이 들어옴
