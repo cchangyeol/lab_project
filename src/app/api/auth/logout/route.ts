@@ -1,8 +1,9 @@
 // 로그인 쿠키를 지우는 API
 import { NextResponse } from 'next/server';
+import { SESSION_COOKIE } from '@/lib/session';
 
 export async function POST() {
   const res = NextResponse.json({ ok: true });
-  res.cookies.delete('admin_token');
+  res.cookies.delete(SESSION_COOKIE);
   return res;
 }
