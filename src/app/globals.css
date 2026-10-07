@@ -28,7 +28,7 @@ body {
 
 @keyframes cd-pop {
   0% {
-    tramsform: scale(0) rorate(0deg);
+    transform: scale(0) rotate(0deg);
     opacity: 0;
   }
   60% {

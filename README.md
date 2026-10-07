@@ -58,16 +58,22 @@ interface Game {
 src/
 ├─ app/
 │  ├─ layout.tsx, page.tsx, globals.css
+│  ├─ login/page.tsx                          # 로그인 화면
 │  ├─ api/
+│  │  ├─ auth/login/route.ts, auth/logout/route.ts  # 로그인/로그아웃 (POST)
 │  │  ├─ games/route.ts                       # 등록 (POST)
 │  │  ├─ games/[id]/route.ts                  # 수정·삭제 (PUT/DELETE)
 │  │  ├─ games/[id]/screenshots/route.ts      # 스크린샷만 갱신 (PATCH)
 │  │  └─ upload/route.ts                      # 이미지 업로드 (POST)
 │  └─ games/
-│     ├─ new/page.tsx                         # 등록 폼
-│     └─ [id]/page.tsx, [id]/edit/page.tsx    # 상세·수정 화면
-├─ components/                                # GameCard, ScreenshotPanel 등 재사용 UI
-├─ lib/mongodb.ts                             # DB 연결
+│     ├─ new/page.tsx                         # 등록 화면 (GameForm 사용)
+│     └─ [id]/page.tsx, [id]/edit/page.tsx    # 상세 화면 · 수정 화면 (GameForm 사용)
+├─ components/                                # GameForm, GameCard, ScreenshotPanel 등 재사용 UI
+├─ lib/
+│  ├─ mongodb.ts                              # DB 연결
+│  ├─ normalizeGame.ts                        # DB 문서 → Game 타입 변환 (옛 데이터 호환)
+│  └─ validateGame.ts                         # 등록/수정 요청 입력값 검증
+├─ middleware.ts                              # 기록을 바꾸는 요청에 로그인 여부 확인
 └─ types/game.ts                              # 타입 정의
 ```
 
@@ -75,21 +81,24 @@ src/
 
 ### 1. 환경변수 설정
 
-프로젝트 루트에 `.env.local` 파일을 만들고 아래 값을 채워주세요.
+프로젝트 루트에 `.env.local` 파일을 만들고 아래 값을 채워주세요. (`.env.example` 참고)
 
 ```
 MONGODB_URI=여기에_MongoDB_Atlas_연결_문자열
 BLOB_READ_WRITE_TOKEN=여기에_Vercel_Blob_토큰
+ADMIN_PASSWORD=기록을_등록·수정·삭제할_때_쓸_비밀번호
 ```
 
 ### 2. 설치 및 실행
+
+Node.js 20.19 이상이 필요합니다 (mongodb 드라이버 7.x 요구사항).
 
 ```bash
 npm install
 npm run dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 열면 확인할 수 있습니다.
+브라우저에서 [http://localhost:3000](http://localhost:3000)을 열면 확인할 수 있고, `/login`에서 `ADMIN_PASSWORD`로 로그인해야 기록을 등록·수정·삭제할 수 있습니다.
 
 ## 진행 단계
 
@@ -98,8 +107,9 @@ npm run dev
 1. **1단계**: 등록 / 목록 / 상세 보기
 2. **2단계**: 수정 / 삭제 / 검색
 3. **3단계**: 필터, 정렬, 트레일러·스크린샷, 디자인 개선
+4. **4단계**: 비밀번호 로그인, 입력값 검증 등 보안·안정성 보완
 
 ## 참고 사항
 
-- 로그인·공유·알림 기능은 포함하지 않습니다.
+- 회원가입이나 다중 사용자 권한 구분은 없고, 쓰기 작업 전체를 비밀번호 하나로만 보호합니다.
 - 외부 API를 통한 자동 데이터 수집 없이, 사용자가 직접 입력한 정보만 다룹니다.
