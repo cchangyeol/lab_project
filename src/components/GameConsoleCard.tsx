@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { Game } from '@/types/game';
 import { STATUS_STYLES } from '@/types/game';
 import GameSummary from '@/components/GameSummary';
+import HlsVideo from '@/components/HlsVideo';
 
 const YOUTUBE_HOSTNAMES = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com']);
 
@@ -23,15 +24,26 @@ function isDirectVideoUrl(url: string): boolean {
   return /\.(mp4|webm)(\?.*)?$/i.test(url);
 }
 
+function isHlsUrl(url: string): boolean {
+  return /\.m3u8(\?.*)?$/i.test(url);
+}
+
 // 유튜브도, mp4/webm 링크도 아니면 새 탭으로 여는 링크를 보여줌
 function renderTrailer(url: string) {
   const youtubeId = getYoutubeId(url);
+
   if (youtubeId) {
     return <iframe key={url} className="w-full aspect-video rounded-xl" src={`https://www.youtube.com/embed/${youtubeId}`} title="트레일러" allowFullScreen />;
   }
+
   if (isDirectVideoUrl(url)) {
     return <video key={url} className="w-full aspect-video rounded-xl" src={url} controls />;
   }
+
+  if (isHlsUrl(url)) {
+    return <HlsVideo key={url} src={url} className="w-full aspect-video rounded-xl" />;
+  }
+
   return (
     <a
       key={url}

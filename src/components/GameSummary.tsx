@@ -21,25 +21,36 @@ export default function GameSummary({ text, sourceUrl }: { text: string; sourceU
       <p className="whitespace-pre-line">
         {expanded || !isLong ? text : `${truncate(text, PREVIEW_LENGTH)}...`}
       </p>
-      {isLong && (
-        sourceUrl ? (
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 inline-block text-xs text-sky-600 hover:text-sky-800 underline"
-          >
-            본문 보러가기 ↗
-          </a>
-        ) : (
+      {isLong && !expanded && (
         <button
           type="button"
-          onClick={() => setExpanded((prev) => !prev)}
+          onClick={() => setExpanded(true)}
           className="mt-1 text-xs text-sky-600 hover:text-sky-800 underline"
         >
-          {expanded ? '접기' : '본문 보러가기'}
+          본문 보러가기
         </button>
-       )
+      )}
+
+      {expanded && (
+        <div className="mt-1 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="text-xs text-sky-600 hover:text-sky-800 underline"
+          >
+            접기
+          </button>
+          {sourceUrl && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-sky-600 hover:text-sky-800 underline"
+            >
+              원본에서 보기 ↗
+            </a>
+          )}
+        </div>
       )}
     </div>
   );
