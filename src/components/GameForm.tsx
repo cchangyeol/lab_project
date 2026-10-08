@@ -32,6 +32,7 @@ interface RawgGameDetail {
   publishers: string[];
   screenshots: string[];
   trailerUrl: string | null;
+  sourceUrl: string | null;
 }
 
 // /api/steam 응답의 result
@@ -67,6 +68,7 @@ export default function GameForm({ game }: { game?: Game }) {
   // RAWG/Steam에서 가져온 선택 정보
   const [coverImage, setCoverImage] = useState(game?.coverImage ?? '');
   const [summary, setSummary] = useState(game?.summary ?? '');
+  const [sourceUrl, setSourceUrl] = useState(game?.sourceUrl ?? '');
   const [metacritic, setMetacritic] = useState<number | undefined>(game?.metacritic);
   const [developers, setDevelopers] = useState<string[]>(game?.developers ?? []);
   const [publishers, setPublishers] = useState<string[]>(game?.publishers ?? []);
@@ -129,6 +131,7 @@ export default function GameForm({ game }: { game?: Game }) {
       if (detail.released) setReleaseDate(detail.released);
       if (detail.coverImage) setCoverImage(detail.coverImage);
       if (detail.summary) setSummary(detail.summary);
+      if (detail.sourceUrl) setSourceUrl(detail.sourceUrl);
       if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
       if (detail.developers.length > 0) setDevelopers(detail.developers);
       if (detail.publishers.length > 0) setPublishers(detail.publishers);
@@ -276,6 +279,7 @@ export default function GameForm({ game }: { game?: Game }) {
         screenshots: await uploadPending(),
         coverImage: coverImage || undefined,
         summary: summary || undefined,
+        sourceUrl: sourceUrl || undefined,
         metacritic,
         developers: developers.length > 0 ? developers : undefined,
         publishers: publishers.length > 0 ? publishers : undefined,

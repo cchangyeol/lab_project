@@ -40,5 +40,6 @@ export function sanitizeGameInput(body: unknown): Omit<Game, '_id'> | null {
     developers: Array.isArray(b.developers) ? b.developers.filter((d): d is string => typeof d === 'string') : undefined,
     publishers: Array.isArray(b.publishers) ? b.publishers.filter((p): p is string => typeof p === 'string') : undefined,
     price: typeof b.price === 'string' ? b.price : undefined,
+    sourceUrl: typeof b.sourceUrl === 'string' ? b.sourceUrl : undefined,
   };
 }

@@ -12,7 +12,7 @@ function truncate(text: string, max: number): string {
   return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd();
 }
 
-export default function GameSummary({ text }: { text: string }) {
+export default function GameSummary({ text, sourceUrl }: { text: string; sourceUrl?: string }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = text.length > PREVIEW_LENGTH;
 
@@ -22,6 +22,16 @@ export default function GameSummary({ text }: { text: string }) {
         {expanded || !isLong ? text : `${truncate(text, PREVIEW_LENGTH)}...`}
       </p>
       {isLong && (
+        sourceUrl ? (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 inline-block text-xs text-sky-600 hover:text-sky-800 underline"
+          >
+            본문 보러가기 ↗
+          </a>
+        ) : (
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
@@ -29,6 +39,7 @@ export default function GameSummary({ text }: { text: string }) {
         >
           {expanded ? '접기' : '본문 보러가기'}
         </button>
+       )
       )}
     </div>
   );

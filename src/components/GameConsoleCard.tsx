@@ -141,7 +141,7 @@ export default function GameConsoleCard({ game, trailerUrls }: { game: Game; tra
                 <p className="text-sm text-stone-400 text-center py-6">등록된 트레일러가 없습니다.</p>
               )
             ) : game.summary ? (
-              <GameSummary text={game.summary} />
+              <GameSummary text={game.summary} sourceUrl={game.sourceUrl} />
             ) : (
               <p className="text-sm text-stone-400 text-center py-6">등록된 소개글이 없습니다.</p>
             )}

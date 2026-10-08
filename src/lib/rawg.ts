@@ -94,6 +94,7 @@ interface RawgApiGameDetail {
   developers?: RawgApiNamed[];
   publishers?: RawgApiNamed[];
   clip?: RawgApiClip | null;
+  slug?: string;
 }
 
 interface RawgApiScreenshot {
@@ -121,6 +122,7 @@ export interface RawgGameDetail {
   publishers: string[];
   screenshots: string[];
   trailerUrl: string | null;
+  sourceUrl: string | null;
 }
 
 // 고른 게임의 자세한 정보(장르, 평점, 개발사 등)와 스크린샷을 가져옴
@@ -155,5 +157,6 @@ export async function getRawgGameDetail(id: number): Promise<RawgGameDetail> {
     publishers: (detail.publishers ?? []).map((p) => p.name).filter((n): n is string => Boolean(n)),
     screenshots: (screenshotsData.results ?? []).map((s) => s.image).filter((n): n is string => Boolean(n)).slice(0, 12),
     trailerUrl: detail.clip?.clip ?? detail.clip?.video ?? null,
+    sourceUrl: detail.slug ? `https://rawg.io/games/${detail.slug}` : null,
   };
 }
