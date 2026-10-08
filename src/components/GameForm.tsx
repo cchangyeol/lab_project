@@ -303,7 +303,7 @@ export default function GameForm({ game }: { game?: Game }) {
         router.refresh(); // 상세 화면 캐시를 비워서 수정한 값이 새로고침 없이 바로 보이게 함
         router.replace(`/games/${game!._id}`);
       } else {
-        router.refresh // 목록 캐시를 비워서 방금 등록한 카드가 바로 보이게함
+        router.refresh(); // 목록 캐시를 비워서 방금 등록한 카드가 바로 보이게 함
         router.back();
       }
     } else {
