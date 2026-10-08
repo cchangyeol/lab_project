@@ -3,21 +3,21 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Game, GameStatus } from '@/types/game';
-
-const STATUS_STYLES: Record<GameStatus, string> = {
-  하고싶음: 'bg-sky-100 text-sky-700',
-  하는중: 'bg-amber-100 text-amber-700',
-  클리어: 'bg-emerald-100 text-emerald-700',
-  중단: 'bg-rose-100 text-rose-700',
-};
+import Link from 'next/link';
+import type { Game } from '@/types/game';
+import { STATUS_STYLES } from '@/types/game';
 
 export default function GameCard({ game }: { game: Game }) {
   const router = useRouter();
   const [opening, setOpening] = useState(false); // 열리는 애니메이션 중인지
-  const coverUrl = game.screenshots?.[0]?.url;
+  const coverUrl = game.coverImage ?? game.screenshots?.[0]?.url;
 
-  function handleClick() {
+  // 그냥 왼쪽 클릭이면 CD 열리는 애니메이션을 보여주고 애니메이션이 끝난 뒤 이동
+  // 새 탭으로 열기(Ctrl/Cmd/가운데 클릭)는 Link 기본 동작을 그대로 두어서 동작하게 함
+  function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
+
     if (opening) return; // 이미 열리는 중이면 무시
     setOpening(true);
 
@@ -28,8 +28,8 @@ export default function GameCard({ game }: { game: Game }) {
   }
 
   return (
-    <button
-      type="button"
+    <Link
+      href={`/games/${game._id}`}
       onClick={handleClick}
       className="group relative w-full text-left rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col transition hover:-translate-y-1 hover:shadow-md aspect-[3/4]"
     >
@@ -53,7 +53,7 @@ export default function GameCard({ game }: { game: Game }) {
         {coverUrl ? (
           <>
             <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover scale-90" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black-20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
           <div className="absolute inset-0 bg-white" />
@@ -69,6 +69,6 @@ export default function GameCard({ game }: { game: Game }) {
           <span className={`self-start text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[game.status]}`}>{game.status}</span>
         </div>
       </div>
-    </button>
+    </Link>
   );
 }

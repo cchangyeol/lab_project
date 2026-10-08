@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Screenshot } from '@/types/game';
+import { checkImage, uploadImage } from '@/lib/uploadImage';
 
 const PAGE_WEIGHT = 6;
 const TALL_WEIGHT = 3;
@@ -16,12 +17,13 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   const router = useRouter();
   const [page, setPage] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false); // 삭제/순서변경/메모저장 요청이 진행 중인지
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [orientations, setOrientations] = useState<Record<string, Orientation>>({});
 
-  // 이미 올린 파일을 기억해서 중복 업로드를 막음
-  const uploadedNamesRef = useRef<Set<string>>(new Set());
+  // 이미 업로드에 성공한 파일(이름+용량 → 결과 url)을 기억해서 같은 파일의 중복 업로드를 막음
+  const uploadedFilesRef = useRef<Map<string, string>>(new Map());
 
   // 사진마다 세로로 긴 사진인지 미리 확인해서 orientation에 저장
   useEffect(() => {
@@ -59,7 +61,8 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   if (bucket.length > 0) pages.push(bucket);
 
   const totalPages = Math.max(2, pages.length); // 최소 2페이지
-  const current =  pages[page] ?? []; // 현재 페이지에 보여줄 6장
+  const safePage = Math.min(page, totalPages - 1); // 사진이 줄어서 페이지 수가 줄면 마지막 페이지로 보정
+  const current = pages[safePage] ?? []; // 현재 페이지에 보여줄 6장
 
   // 현재 페이지 안에서 왼쪽 칸(무게 3) / 오른쪽 칸 (무게 3)으로 나눔
   const left: Screenshot[] = [];
@@ -75,21 +78,33 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   }
 
   function handleNext() {
-    setPage((p) => (p + 1) % totalPages); // 마지막 페이지 다음엔 다시 처음 페이지
+    setPage((safePage + 1) % totalPages); // 마지막 페이지 다음엔 다시 처음 페이지
   }
 
   function handlePrev() {
-    setPage((p) => (p - 1 + totalPages) % totalPages); // 첫 페이지에서 누르면 마지막 페이지로 이동
+    setPage((safePage - 1 + totalPages) % totalPages); // 첫 페이지에서 누르면 마지막 페이지로 이동
   }
 
   // 서버에 스크린샷 목록을 새로 저장하는 공통 함수
+  // saving 중에는 같은 목록을 두 번 겹쳐 보내지 않도록 호출하는 쪽에서 버튼을 막아둠
   async function saveScreenshots(next: Screenshot[]) {
-    await fetch(`/api/games/${gameId}/screenshots`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ screenshots: next }),
-    });
-    router.refresh();
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/games/${gameId}/screenshots`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ screenshots: next }),
+      });
+
+      if (!res.ok) {
+        alert('저장에 실패했습니다.');
+        return;
+      }
+
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
   }
 
   // 파일을 올리고, 기존 목록에 합쳐서 서버에 저장
@@ -97,12 +112,10 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // 이름 + 용량이 같은 파일은 걸러냄
+    // 이름 + 용량이 같은 파일(이미 올린 적 있는 파일)은 걸러냄
     const newFiles = Array.from(files).filter((file) => {
       const key = `${file.name}_${file.size}`;
-      if (uploadedNamesRef.current.has(key)) return false;
-      uploadedNamesRef.current.add(key);
-      return true;
+      return !uploadedFilesRef.current.has(key);
     });
 
     if (newFiles.length === 0) {
@@ -112,28 +125,48 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
     }
 
     setUploading(true);
-    const uploadedShots: Screenshot[] =[];
+    try {
+      const uploadedShots: Screenshot[] = [];
 
-    for (const file of newFiles) {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: form });
-      const data = await res.json();
-      uploadedShots.push({ url: data.url });
+      for (const file of newFiles) {
+        const problem = checkImage(file);
+        if (problem) {
+          alert(problem);
+          continue;
+        }
+
+        let url: string;
+        try {
+          url = await uploadImage(file);
+        } catch (error) {
+          alert(`업로드에 실패했습니다: ${(error as Error).message}`);
+          continue; // 실패한 파일은 건너뛰고 나머지는 계속 올림
+        }
+
+        uploadedShots.push({ url });
+        uploadedFilesRef.current.set(`${file.name}_${file.size}`, url); // 성공한 파일만 중복 체크 목록에 기록
+      }
+
+      if (uploadedShots.length > 0) {
+        await saveScreenshots([...screenshots, ...uploadedShots]);
+      }
+    } finally {
+      setUploading(false);
+      e.target.value = '';
     }
-
-    await saveScreenshots([...screenshots, ...uploadedShots]);
-    setUploading(false);
-    e.target.value = '';
   }
 
-  async function handleDeleteScreenshot(url: string) {
-    await saveScreenshots(screenshots.filter((s) => s.url !== url));
+  async function handleDeleteScreenshot(shot: Screenshot) {
+    // 지운 사진은 같은 파일을 다시 올릴 수 있게 중복 체크 목록에서도 빼줌
+    uploadedFilesRef.current.forEach((url, key) => {
+      if (url === shot.url) uploadedFilesRef.current.delete(key);
+    });
+    await saveScreenshots(screenshots.filter((s) => s.url !== shot.url));
   }
 
   // 사진을 전체 목록 안에서 앞/뒤로 한 칸 옮김
-  function handleMove(url: string, direction: 'prev' | 'naxt') {
-    const idx = screenshots.findIndex((s) => s.url);
+  function handleMove(url: string, direction: 'prev' | 'next') {
+    const idx = screenshots.findIndex((s) => s.url === url);
     const swapIdx = direction === 'prev' ? idx - 1 : idx + 1;
     if (idx === -1 || swapIdx < 0 || swapIdx >= screenshots.length) return;
     const next = [...screenshots];
@@ -163,24 +196,30 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
         />
         <button
           type="button"
-          onClick={() => handleDeleteScreenshot(shot.url)}
-          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+          onClick={() => handleDeleteScreenshot(shot)}
+          disabled={saving}
+          aria-label="스크린샷 삭제"
+          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition disabled:opacity-50"
         >
           x
         </button>
-        {/* 순서 바꾸기 버튼 (마우스 올리면 나타남) */}
-        <div className="absolute bottom-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+        {/* 순서 바꾸기 버튼 (마우스 올리거나 키보드로 포커스하면 나타남) */}
+        <div className="absolute bottom-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
           <button
             type="button"
             onClick={() => handleMove(shot.url, 'prev')}
-            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-600 text-xs flex items-center justify-center"
+            disabled={saving}
+            aria-label="앞으로 이동"
+            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-600 text-xs flex items-center justify-center disabled:opacity-50"
           >
             ◀
           </button>
           <button
             type="button"
-            onClick={() => handleMove(shot.url, 'naxt')}
-            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-600 text-xs flex items-center justify-center"
+            onClick={() => handleMove(shot.url, 'next')}
+            disabled={saving}
+            aria-label="뒤로 이동"
+            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-600 text-xs flex items-center justify-center disabled:opacity-50"
           >
             ▶
           </button>
@@ -206,19 +245,22 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
         <button
           type="button"
           onClick={handlePrev}
+          aria-label="이전 페이지"
           className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50"
         >
           ←
         </button>
 
         <label className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50 cursor-pointer">
-          +
-          <input type="file" accept="image/*" multiple onChange={handleAddPhotos} className="hidden" />
+          <span aria-hidden="true">+</span>
+          <span className="sr-only">스크린샷 추가</span>
+          <input type="file" accept="image/*" multiple onChange={handleAddPhotos} className="sr-only" />
         </label>
 
         <button
           type="button"
           onClick={handleNext}
+          aria-label="다음 페이지"
           className="w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-sky-600 hover:bg-sky-50"
         >
           →
@@ -244,7 +286,8 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
               <button
                 type="button"
                 onClick={handleSaveNote}
-                className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium"
+                disabled={saving}
+                className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-full px-4 py-1.5 text-sm font-medium disabled:opacity-50"
               >
                 저장
               </button>
