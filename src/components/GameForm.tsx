@@ -467,7 +467,7 @@ export default function GameForm({ game }: { game?: Game }) {
 
             <label className="flex flex-col gap-1 text-sm text-stone-600">
               출시일 (선택)
-              <input type="data" className={inputClass} value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+              <input type="date" className={inputClass} value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             </label>
 
             <div className="grid grid-cols-2 gap-3">

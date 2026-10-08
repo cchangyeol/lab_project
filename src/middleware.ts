@@ -6,7 +6,7 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // 로그인 자체와 로그인/로그아웃 API는 로그인 여부와 상관없이 항상 통과
-const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/aouth/logout']);
+const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -1,4 +1,5 @@
 // 저장된 게임 기록을 카드 목록으로 보여주는 화면
+import type { Game } from '@/types/game';
 import Link from 'next/link'; // 카드를 누르면 다른 페이지로 이동시키는 링크 컴포넌트
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
 import { normalizeGame } from '@/lib/normalizeGame';
@@ -146,7 +147,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
       {games.length === 0 ? (
         <p className="text-stone-500">조건에 맞는 기록이 없습니다.</p>
       ) : (
-        <div className={`grid grid-cols-2 ${COLS_CLASS[cols]} gap-x-4 gap-y-8"`}>
+        <div className={`grid grid-cols-2 ${COLS_CLASS[cols]} gap-x-4 gap-y-8`}>
           {games.map((game) => (
             <GameCard key={game._id} game={game} />
           ))}
