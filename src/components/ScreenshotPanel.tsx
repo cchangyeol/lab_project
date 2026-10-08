@@ -186,13 +186,14 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   }
 
   function renderShot(shot: Screenshot) {
+    const weight = weightOf(shot);
     return (
-      <div key={shot.url} className="relative group mb-3">
+      <div key={shot.url} className="relative group min-h-0" style={{ flexGrow: weight, flexBasis: 0 }}>
         <img
           src={shot.url}
           alt="게임 스크린샷"
           onClick={() => openNote(shot)}
-          className="w-full rounded-xl border border-stone-200 shadow-sm cursor-pointer"
+          className="w-full h-full object-cover rounded-xl border border-stone-200 shadow-sm cursor-pointer"
         />
         <button
           type="button"
@@ -233,8 +234,8 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
       <div className="flex gap-3 flex-1">
         {current.length > 0 ? (
           <>
-            <div className="flex flex-col flex-1">{left.map(renderShot)}</div>
-            <div className="flex flex-col flex-1">{right.map(renderShot)}</div>
+            <div className="flex flex-col gap-3 flex-1 min-h-0">{left.map(renderShot)}</div>
+            <div className="flex flex-col gap-3 flex-1 min-h-0">{right.map(renderShot)}</div>
           </>
         ) : (
           <p className="text-sm text-stone-400 text-center flex-1">등록된 스크린샷이 없습니다.</p>

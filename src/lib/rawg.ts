@@ -39,15 +39,24 @@ function containsHangul(text: string): boolean {
 }
 
 // 키 없이 쓸 수 있는 무료 번역 API
-async function translateToEnglish(text: string): Promise<string> {
+async function translateText(text: string, langpair: string): Promise<string> {
+  if(!text.trim()) return text;
   try{
-    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ko|en`);
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
     if(!res.ok) return text;
     const data = await res.json();
     return data?.responseData?.translatedText || text;
   } catch {
     return text; // 번역 API가 죽어도 검색 자체는 계속됨
   }
+}
+
+function translateToEnglish(text: string): Promise<string> {
+  return translateText(text, 'ko|en');
+}
+
+function translateToKorean(text: string): Promise<string> {
+  return translateText(text, 'en|ko');
 }
 
 // 제목으로 게임을 검색해서 후보 목록을 돌려줌
@@ -84,6 +93,7 @@ interface RawgApiGameDetail {
   tags?: RawgApiNamed[];
   developers?: RawgApiNamed[];
   publishers?: RawgApiNamed[];
+  clip?: RawgApiClip | null;
 }
 
 interface RawgApiScreenshot {
@@ -92,6 +102,11 @@ interface RawgApiScreenshot {
 
 interface RawgApiScreenshotsResponse {
   results?: RawgApiScreenshot[];
+}
+
+interface RawgApiClip {
+  clip?: string;
+  video?: string;
 }
 
 export interface RawgGameDetail {
@@ -105,6 +120,7 @@ export interface RawgGameDetail {
   developers: string[];
   publishers: string[];
   screenshots: string[];
+  trailerUrl: string | null;
 }
 
 // 고른 게임의 자세한 정보(장르, 평점, 개발사 등)와 스크린샷을 가져옴
@@ -123,16 +139,21 @@ export async function getRawgGameDetail(id: number): Promise<RawgGameDetail> {
   const genreNames = (detail.genres ?? []).map((g) => g.name).filter((n): n is string => Boolean(n));
   const tagNames = (detail.tags ?? []).map((t) => t.name).filter((n): n is string => Boolean(n));
 
+  // MyMemory 무료 티어는 한 번에 보낼 수 있는 글자 수 제한이 있어서, 번역 전에 먼저 적당히 자름
+  const summaryEn = (detail.description_raw ?? '').slice(0, 450);
+  const summary = await translateToKorean(summaryEn);
+
   return {
     title: detail.name,
     released: detail.released ?? null,
     coverImage: detail.background_image ?? null,
-    summary: (detail.description_raw ?? '').slice(0, 500),
+    summary,
     metacritic: detail.metacritic ?? null,
     platforms: (detail.platforms ?? []).map((p) => p.platform?.name).filter((n): n is string => Boolean(n)),
     genreTerms: [...genreNames, ...tagNames],
     developers: (detail.developers ?? []).map((d) => d.name).filter((n): n is string => Boolean(n)),
     publishers: (detail.publishers ?? []).map((p) => p.name).filter((n): n is string => Boolean(n)),
     screenshots: (screenshotsData.results ?? []).map((s) => s.image).filter((n): n is string => Boolean(n)).slice(0, 12),
+    trailerUrl: detail.clip?.clip ?? detail.clip?.video ?? null,
   };
 }
