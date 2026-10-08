@@ -16,7 +16,7 @@ export default function DeleteGameButton({ gameId }: { gameId: string }) {
 
     if (res.ok) {
       router.refresh(); // 목록 화면 캐시를 비워서 삭제된 게 바로 반영되게 함
-      router.replace('/'); // 삭제 성공 시 목록 화면으로 이동
+      router.back(); // 삭제 성공 시 목록 화면으로 이동
     } else {
       console.error('삭제에 실패했습니다.');
     }
