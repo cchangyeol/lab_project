@@ -1,11 +1,11 @@
 // 저장된 게임 기록을 카드 목록으로 보여주는 화면
+import type { Game } from '@/types/game';
 import Link from 'next/link'; // 카드를 누르면 다른 페이지로 이동시키는 링크 컴포넌트
 import clientPromise from '@/lib/mongodb'; // MongoDB 연결
-import type { Game, GameStatus } from '@/types/game'; // 게임 기록 타입
-import { GENRE_OPTIONS } from '@/types/game';
 import { normalizeGame } from '@/lib/normalizeGame';
 import GameCard from '@/components/GameCard'; // 게임 기록 카드 컴포넌트
 import LogoutButton from '@/components/LogoutButton';
+import GameFilterForm from '@/components/GameFilterForm';
 
 
 // 검색어에 정규식 특수문자(., *, (, ? 등)가 들어있으면 그대로 문자로 취급하게 함
@@ -14,12 +14,38 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const COLS_OPTIONS = [2, 3, 4, 5, 6] as const;
+const DEFAULT_COLS = 3;
+
+// Tailwind가 클래스를 인식하려면 이름이 코드에 그대로 있어야 해서, 숫자로 동적 조합하지 않고 고정 매핑을 씀
+const COLS_CLASS: Record<number, string> = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-4',
+  5: 'sm:grid-cols-5',
+  6: 'sm:grid-cols-6',
+};
+
+// 현재 검색/필터 조건은 그대로 두고 cols 값만 바꾼 주소를 만듦
+function buildHrefWithCols(params: SearchParams, cols: number): string {
+  const sp = new URLSearchParams();
+  if (params.q) sp.set('q', params.q);
+  if (params.status) sp.set('status', params.status);
+  if (params.platform) sp.set('platform', params.platform);
+  if (params.sort) sp.set('sort', params.sort);
+  const genres = Array.isArray(params.genre) ? params.genre : params.genre? [params.genre] : [];
+  genres.forEach((g) => sp.append('genre', g));
+  sp.set('cols', String(cols));
+  return `/?${sp.toString()}`;
+}
+
 type SearchParams = {
   q?: string;
   status?: string;
   platform?: string;
   genre?: string | string[];
   sort?: string;
+  cols?: string;
 }
 
 // 서버에서 실행되는 함수라 DB에 바로 접근 가능 (API를 안 거쳐도 됨)
@@ -58,10 +84,6 @@ async function getFilterOptions(){
 
   return { platforms };
 }
-const STATUS_OPTIONS: GameStatus[] = ['하고싶음', '하는중', '클리어', '중단'];
-
-// select 박스 공통 스타일
-const selectClass = 'appearance-none bg-stone-50 border border-stone-200 rounded-xl pl-3 pr-7 py-2 text-sm font-medium text-stone-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-300 transition cursor-pointer';
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   // 목록 데이터와 필터 옵션을 동시에 가져옴 (서로 가져올 필요 없이 같이 처리
@@ -69,6 +91,9 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     getGames(searchParams),
     getFilterOptions(),
    ]);
+
+   const requestedCols = Number(searchParams.cols);
+   const cols = (COLS_OPTIONS as readonly number[]).includes(requestedCols)? requestedCols : DEFAULT_COLS;
 
    // 새로고침해도 체크박스 상태가 유지되도록 현재 선택된 장르를 미리 계산
   const selectedGenres = Array.isArray(searchParams.genre)
@@ -92,77 +117,37 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </div>
       </div>
 
-      <form method="get" className="mb-8 bg-white border border-stone-200 rounded-2xl shadow-sm p-4 flex flex-col gap-3">
-        {/* 1줄: 검색어 + 정렬 + 적용 */}
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            name="q"
-            placeholder="게임명으로 검색"
-            defaultValue={searchParams.q ?? ''}
-            className="flex-1 min-w-[160px] bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-300 transition"
-          />
+      <GameFilterForm
+       q={searchParams.q ?? ''}
+       sort={searchParams.sort ?? ''}
+       status={searchParams.status ?? ''}
+       platform={searchParams.platform ?? ''}
+       platforms={platforms}
+       selectedGenres={selectedGenres}
+       cols={cols}
+       />
 
-          <div className="relative">
-            <select name="sort" defaultValue={searchParams.sort ?? ''} className={selectClass}>
-              <option value="">정렬: 기본</option>
-              <option value="rating">평점 높은 순</option>
-              <option value="title">이름 가나다순</option>
-              <option value="recent">최근 플레이한 순</option>
-            </select>
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 text-xs">▾</span>
-          </div>
-
-          <button
-            type="submit"
-            className="bg-sky-200 hover:bg-sky-300 text-sky-900 rounded-xl px-5 py-2 text-sm font-semibold transition"
+      <div className="flex items-center justify-end gap-1 mb-3">
+        <span className="text-xs text-stone-400 mr-1">한 줄에 보기</span>
+        {COLS_OPTIONS.map((n) => (
+          <Link
+            key={n}
+            href={buildHrefWithCols(searchParams, n)}
+            className={`w-7 h-7 flex items-center justify-center rounded-full text-xs border transition ${
+              cols === n
+                ? 'bg-sky-200 border-sky-300 text-sky-900 font-semibold'
+                : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'
+            }`}
           >
-            적용
-          </button>
-        </div>
-
-        {/* 2줄: 상태 / 플랫폼 / 장르 - 구분선으로 분리 */}
-        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-stone-100">
-          <div className="relative">
-            <select name="status" defaultValue={searchParams.status ?? ''} className={selectClass}>
-              <option value="">상태 전체</option>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 text-xs">▾</span>
-          </div>
-
-          <div className="relative">
-            <select name="platform" defaultValue={searchParams.platform ?? ''} className={selectClass}>
-              <option value="">플랫폼 전체</option>
-              {platforms.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 text-xs">▾</span>
-          </div>
-
-          <div className="w-px h-6 bg-stone-200 mx-1" />
-
-          <div className="flex flex-wrap gap-1.5">
-            {GENRE_OPTIONS.map((g) => (
-              <label
-                key={g}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-stone-200 bg-stone-50 text-stone-600 has-[:checked]:bg-sky-200 has-[:checked]:border-sky-300 has-[:checked]:text-sky-900 cursor-pointer transition"
-              >
-                <input type="checkbox" name="genre" value={g} defaultChecked={selectedGenres.includes(g)} className="sr-only" />
-                {g}
-              </label>
-            ))}
-          </div>
-        </div>
-      </form>
+            {n}
+          </Link>
+        ))}
+      </div>
 
       {games.length === 0 ? (
         <p className="text-stone-500">조건에 맞는 기록이 없습니다.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8">
+        <div className={`grid grid-cols-2 ${COLS_CLASS[cols]} gap-x-4 gap-y-8`}>
           {games.map((game) => (
             <GameCard key={game._id} game={game} />
           ))}

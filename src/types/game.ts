@@ -41,6 +41,7 @@ export interface Game {
   // RAWG&STEAM에서 가져오는 정보들
   coverImage?: string; // RAWG 커버 이미지 주소
   summary?: string; // RAWG 게임 소개글
+  sourceUrl?: string;
   metacritic?: number; // RAWG 메타크리틱 점수 (0~100)
   developers?: string[]; // 개발사
   publishers?: string[]; // 퍼블리셔

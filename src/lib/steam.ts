@@ -14,6 +14,7 @@ interface SteamSearchResponse {
 interface SteamMovie {
   mp4?: { max?: string };
   webm?: { max?: string};
+  hls_h264?: string; // steam에서 주는 필드 명
 }
 
 interface SteamPriceOverview {
@@ -37,11 +38,17 @@ export interface SteamInfo {
 export async function findSteamInfo(title: string): Promise<SteamInfo | null> {
  const searchUrl = `${STEAM_SEARCH_URL}?term=${encodeURIComponent(title)}&l=korean&cc=kr`;
  const searchRes = await fetch(searchUrl);
- if (!searchRes.ok) return null;
+ if (!searchRes.ok) {
+   console.error('Steam search 실패', searchRes.status);
+   return null;
+ }
 
  const searchData = (await searchRes.json()) as SteamSearchResponse;
  const match = searchData.items?.[0]; // 검색 결과 중 가장 위에 뜨는 게임을 씀
- if (!match) return null;
+ if (!match) {
+   console.error('Steam 검색 결과 없음', title, searchData); // 실제로 뭐가 왔는지 확인
+   return null;
+ }
 
  const detailsUrl = `${STEAM_DETAILS_URL}?appids=${match.id}&l=korean&cc=kr`;
  const detailsRes = await fetch(detailsUrl);
@@ -56,7 +63,7 @@ export async function findSteamInfo(title: string): Promise<SteamInfo | null> {
 
  // movies 중 첫번째 트레일러의 영상 주소를 가져옴
  const firstMovie = appData.movies?.[0];
- const rawTrailerUrl = firstMovie?.mp4?.max ?? firstMovie?.webm?.max ?? null;
+ const rawTrailerUrl = firstMovie?.mp4?.max ?? firstMovie?.webm?.max ?? firstMovie?.hls_h264 ?? null;
  const trailerUrl = rawTrailerUrl ? rawTrailerUrl.replace(/^http:\/\//, 'https://') : null;
 
  return { price, trailerUrl };

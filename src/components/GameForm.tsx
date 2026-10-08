@@ -8,7 +8,7 @@ import type { Game, GameStatus, Screenshot } from '@/types/game';
 import { GENRE_OPTIONS, PLATFORM_OPTIONS } from '@/types/game';
 import BackButton from '@/components/BackButton';
 import { checkImage, uploadImage } from '@/lib/uploadImage';
-import { matchRawgGenres, matchRawgPlatform } from '@/lib/rawgMapping';
+import { matchRawgGenres, matchRawgPlatforms } from '@/lib/rawgMapping';
 
 // /api/rawg/search 결과 하나
 interface RawgSearchResult {
@@ -31,6 +31,8 @@ interface RawgGameDetail {
   developers: string[];
   publishers: string[];
   screenshots: string[];
+  trailerUrl: string | null;
+  sourceUrl: string | null;
 }
 
 // /api/steam 응답의 result
@@ -66,6 +68,7 @@ export default function GameForm({ game }: { game?: Game }) {
   // RAWG/Steam에서 가져온 선택 정보
   const [coverImage, setCoverImage] = useState(game?.coverImage ?? '');
   const [summary, setSummary] = useState(game?.summary ?? '');
+  const [sourceUrl, setSourceUrl] = useState(game?.sourceUrl ?? '');
   const [metacritic, setMetacritic] = useState<number | undefined>(game?.metacritic);
   const [developers, setDevelopers] = useState<string[]>(game?.developers ?? []);
   const [publishers, setPublishers] = useState<string[]>(game?.publishers ?? []);
@@ -77,6 +80,7 @@ export default function GameForm({ game }: { game?: Game }) {
   const [rawgSearching, setRawgSearching] = useState(false);
   const [rawgApplyingId, setRawgApplyingId] = useState<number | null>(null);
   const [rawgError, setRawgError] = useState('');
+  const [rawgPlatformCandidates, setRawgPlatformCandidates] = useState<string[]>([]);
 
   // "검색" 버튼을 눌렀을 때만 호출됨
   async function handleRawgSearch() {
@@ -113,8 +117,11 @@ export default function GameForm({ game }: { game?: Game }) {
 
       setTitle(detail.title);
 
-      const matchedPlatform = matchRawgPlatform(detail.platforms);
-      if (matchedPlatform) setPlatform(matchedPlatform);
+      const matchedPlatforms = matchRawgPlatforms(detail.platforms);
+      setRawgPlatformCandidates(matchedPlatforms);
+      if (matchedPlatforms.length === 1) {
+        setPlatform(matchedPlatforms[0]); // 하나만 매칭도면 기존처럼 자동 선택
+      } // 2개 이상이면 직접 고르게 둠
 
       const matchedGenres = matchRawgGenres(detail.genreTerms);
       if (matchedGenres.length > 0) {
@@ -124,6 +131,7 @@ export default function GameForm({ game }: { game?: Game }) {
       if (detail.released) setReleaseDate(detail.released);
       if (detail.coverImage) setCoverImage(detail.coverImage);
       if (detail.summary) setSummary(detail.summary);
+      if (detail.sourceUrl) setSourceUrl(detail.sourceUrl);
       if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
       if (detail.developers.length > 0) setDevelopers(detail.developers);
       if (detail.publishers.length > 0) setPublishers(detail.publishers);
@@ -136,8 +144,9 @@ export default function GameForm({ game }: { game?: Game }) {
         }
       }
       if (steamInfo?.price) setPrice(steamInfo.price);
-      if (steamInfo?.trailerUrl) {
-        const trailerUrl = steamInfo.trailerUrl;
+
+      const trailerUrl = steamInfo?.trailerUrl ?? detail.trailerUrl ?? null;
+      if (trailerUrl) {
         setTrailerUrls((prev) => {
           const filled = prev.filter((u) => u.trim() !== '');
           if (filled.includes(trailerUrl) || filled.length >= 3) return prev;
@@ -270,6 +279,7 @@ export default function GameForm({ game }: { game?: Game }) {
         screenshots: await uploadPending(),
         coverImage: coverImage || undefined,
         summary: summary || undefined,
+        sourceUrl: sourceUrl || undefined,
         metacritic,
         developers: developers.length > 0 ? developers : undefined,
         publishers: publishers.length > 0 ? publishers : undefined,
@@ -291,9 +301,10 @@ export default function GameForm({ game }: { game?: Game }) {
     if (res.ok) {
       if (isEdit) {
         router.refresh(); // 상세 화면 캐시를 비워서 수정한 값이 새로고침 없이 바로 보이게 함
-        router.push(`/games/${game!._id}`);
+        router.replace(`/games/${game!._id}`);
       } else {
-        router.push('/');
+        router.refresh(); // 목록 캐시를 비워서 방금 등록한 카드가 바로 보이게 함
+        router.back();
       }
     } else {
       const data = await res.json().catch(() => ({}));
@@ -392,6 +403,22 @@ export default function GameForm({ game }: { game?: Game }) {
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
+                {rawgPlatformCandidates.length > 1 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {rawgPlatformCandidates.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPlatform(p)}
+                        className={`text-xs px-2 py-0.5 rounded-full border transition ${
+                          platform === p ? 'bg-sky-200 border-sky-300 text-sky-900' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -439,14 +466,22 @@ export default function GameForm({ game }: { game?: Game }) {
           <div className="flex flex-col gap-3 border-t border-stone-100 pt-5">
             <h2 className={sectionTitleClass}>날짜 · 플레이 정보</h2>
 
+            <label className="flex flex-col gap-1 text-sm text-stone-600">
+              출시일 (선택)
+              <input type="date" className={inputClass} value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+            </label>
+
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-sm text-stone-600">
                 시작일
-                {status === '하고싶음' ? (
-                  <input type="text" className={inputClass} value="출시 예정" disabled />
-                ) : (
-                  <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-                )}
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  disabled={status === '하고싶음'}
+                  required={status !== '하고싶음'}
+                />
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -486,9 +521,7 @@ export default function GameForm({ game }: { game?: Game }) {
               {trailerUrls.map((url, i) => (
                 <div key={i} className="flex gap-2">
                   <input type="url" className={`${inputClass} flex-1`} value={url} onChange={(e) => handleTrailerChange(i, e.target.value)} />
-                  {trailerUrls.length > 1 && (
                     <button type="button" onClick={() => handleRemoveTrailer(i)} className="text-rose-600 text-sm px-2">삭제</button>
-                  )}
                 </div>
               ))}
               {trailerUrls.length < 3 && (

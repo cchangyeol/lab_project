@@ -36,11 +36,12 @@ export function matchRawgGenres(terms: string[]): string[] {
 }
 
   // 기존 플렛폼 옵션(PC, PS5, Switch, Mobile, 기타) 중 하나로 매칭
-  export function matchRawgPlatform(platforms: string[]): string {
+  export function matchRawgPlatforms(platforms: string[]): string[] {
     const lower = platforms.map((p) => p.toLowerCase());
-    if (lower.some((p) => p.includes('switch'))) return 'Switch';
-    if (lower.some((p) => p.includes('playstation'))) return 'PS5';
-    if (lower.some((p) => p.includes('ios') || p.includes('android'))) return 'Mobile';
-    if (lower.some((p) => p.includes('pc'))) return 'PC';
-    return '';
+    const matched: string[] = [];
+    if (lower.some((p) => p.includes('switch'))) matched.push('Switch');
+    if (lower.some((p) => p.includes('playstation'))) matched.push('PS5');
+    if (lower.some((p) => p.includes('ios') || p.includes('android'))) matched.push('Mobile');
+    if (lower.some((p) => p.includes('pc'))) matched.push('PC');
+    return matched;
 }

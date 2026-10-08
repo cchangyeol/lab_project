@@ -5,18 +5,35 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+// 로그인 자체와 로그인/로그아웃 API는 로그인 여부와 상관없이 항상 통과
+const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
+
 export async function middleware(request: NextRequest) {
-  if (!WRITE_METHODS.has(request.method)) {
+  const { pathname } = request.nextUrl;
+
+  if (PUBLIC_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
-  if (!(await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value))) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  const isLoggedIn = await
+  verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
+
+  // API 요청: 기존처럼 '쓰기' 요청일 때만 막음
+  if (pathname.startsWith('/api/')) {
+    if (WRITE_METHODS.has(request.method) && !isLoggedIn) {
+      return NextResponse.json({ error: '로그인이 필요합니다.'}, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
+  // 그 외(화면)는 로그인 안 했으면 로그인 화면으로 보냄
+  if (!isLoggedIn) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/games/:path*', '/api/upload'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
