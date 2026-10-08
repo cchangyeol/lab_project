@@ -60,7 +60,7 @@ export default function ScreenshotPanel({ gameId, screenshots }: { gameId: strin
   }
   if (bucket.length > 0) pages.push(bucket);
 
-  const totalPages = Math.max(2, pages.length); // 최소 2페이지
+  const totalPages = Math.max(1, pages.length);
   const safePage = Math.min(page, totalPages - 1); // 사진이 줄어서 페이지 수가 줄면 마지막 페이지로 보정
   const current = pages[safePage] ?? []; // 현재 페이지에 보여줄 6장
 
