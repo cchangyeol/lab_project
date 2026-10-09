@@ -75,14 +75,16 @@ MySQL 같은 "관계형 DB"는 미리 테이블과 칼럼을 딱 정해놓고 �
 
 ### Steam 상점 API (비공식)
 
-RAWG에는 없는 **가격**과 **트레일러 영상**을 가져오는 데만 씁니다. 공식 문서는 없지만 Steam 상점 웹페이지가 내부적으로 쓰는, 널리 알려진 엔드포인트입니다.
+처음엔 RAWG에는 없는 **가격**과 **트레일러 영상**을 보완하는 용도로만 썼는데, 지금은 RAWG와 별개로 **제목으로 직접 검색하고(`/api/steam/search`) 상세 정보로 폼 전체를 채우는(`/api/steam/[appid]`) 용도**로도 씁니다 — PC 게임은 Steam 쪽 정보가 더 정확한 경우가 많아서, 검색창 하나로 RAWG/Steam 결과를 같이 보여주고 고른 출처에 맞게 적용하는 구조로 바뀌었습니다. 로그인된 내 Steam 라이브러리 목록(`/api/steam/library`)에서 바로 골라 채우는 것도 가능합니다. 공식 문서는 없지만 Steam 상점 웹페이지가 내부적으로 쓰는, 널리 알려진 엔드포인트입니다.
 
 - **직접 겪은 일**: Steam이 트레일러 영상 주소를 주는 형식을 바꿨습니다. 예전엔 `movies[0].mp4.max` / `webm.max`로 직접 재생 가능한 mp4/webm 링크를 줬는데, 지금은 `hls_h264`(HLS 스트리밍, `.m3u8`) 위주로 줍니다. `.m3u8`은 `<video src=...>` 태그로 바로 재생이 안 되고(사파리는 네이티브로 되지만 크롬/파이어폭스는 안 됨), 그래서 `hls.js` 라이브러리로 재생하는 `HlsVideo.tsx` 컴포넌트를 추가했습니다. **교훈**: 공식 문서가 없는 비공식 API는 사전 통보 없이 응답 형식이 바뀔 수 있다는 걸 실제로 겪었습니다. 터미널 로그에 실제 응답을 찍어보는(`console.error`) 방식으로 원인을 찾았습니다.
 - **트레일러를 찾는 순서**: ① Steam의 mp4/webm(있으면) → ② Steam의 `hls_h264` → ③ RAWG의 `clip`. 셋 다 없으면(대부분 콘솔 독점작) 트레일러 없이 저장됩니다. Steam 자체에 게임이 없는 경우(검색 결과 0건)는 버그가 아니라 정상 동작입니다 — 예를 들어 닌텐도 스위치 독점작은 애초에 Steam 상점에 없습니다.
+- **검색어에 한글이 섞여 있으면**(예: "테라리아") RAWG와 마찬가지로 먼저 영어로 번역한 뒤(`lib/translate.ts`) Steam에 검색을 보냅니다. Steam storesearch API는 영문 게임명에 한글 검색어를 매칭해주지 않아서, 번역 없이 그대로 보내면 결과가 0건으로 조용히 비어버립니다 (자세한 건 6절 트러블슈팅 참고).
+- **장르도 RAWG랑 Steam이 서로 다른 모양으로 옴**: Steam appdetails를 `l=korean`으로 호출하면 장르 이름이 이미 한글("액션", "어드벤처" 등)로 와서, RAWG용 영문 키워드 매핑과는 별개의 매핑 함수(`matchSteamGenres`)가 필요합니다 (6절 트러블슈팅 참고).
 
 ### MyMemory 번역 API
 
-키 발급 없이 쓸 수 있는 무료 번역 API입니다. 한글 검색어 → 영어(RAWG 검색용), 영문 소개글 → 한국어(화면 표시용) 양방향으로 씁니다.
+키 발급 없이 쓸 수 있는 무료 번역 API입니다. 한글 검색어 → 영어(RAWG/Steam 검색용), 영문 소개글 → 한국어(화면 표시용) 양방향으로 씁니다. 번역 관련 함수(`containsHangul`, `translateText`, `translateToEnglish`, `translateToKorean`)는 원래 `lib/rawg.ts` 안에만 있었는데, Steam 검색에도 똑같이 필요해져서 공용 파일 `lib/translate.ts`로 빼서 두 파일이 같이 씁니다.
 
 ---
 
@@ -111,9 +113,10 @@ lab_project/
    │  ├─ validateGame.ts
    │  ├─ session.ts
    │  ├─ uploadImage.ts
-   │  ├─ rawg.ts                # 검색 + 상세(번역, clip, sourceUrl 포함)
-   │  ├─ rawgMapping.ts         # 장르/플랫폼 매칭 (플랫폼은 여러 개 매칭 가능)
-   │  └─ steam.ts               # 가격 + 트레일러(mp4/webm/hls_h264)
+   │  ├─ translate.ts           # 한글 감지 + 번역 (RAWG/Steam 검색 공용)
+   │  ├─ rawg.ts                # 검색 + 상세(clip, sourceUrl 포함)
+   │  ├─ genreMapping.ts        # RAWG/Steam 장르 매칭 + 플랫폼 매칭 (플랫폼은 여러 개 매칭 가능)
+   │  └─ steam.ts               # 검색 + 상세 + 라이브러리 + 가격/트레일러(mp4/webm/hls_h264)
    ├─ components/               # 재사용 가능한 화면 부품
    │  ├─ GameForm.tsx
    │  ├─ GameFilterForm.tsx     # 메인 목록의 검색/필터 폼 (page.tsx에서 분리됨)
@@ -148,7 +151,11 @@ lab_project/
          ├─ rawg/
          │  ├─ search/route.ts
          │  └─ [id]/route.ts
-         └─ steam/route.ts
+         └─ steam/
+            ├─ route.ts                    # 제목 기준 가격/트레일러 (RAWG 보완용)
+            ├─ search/route.ts             # Steam 검색
+            ├─ [appid]/route.ts            # Steam 상세
+            └─ library/route.ts            # 내 Steam 보유 게임 목록
 ```
 
 ---
@@ -184,13 +191,14 @@ const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 - **`validateGame.ts`**: 브라우저가 등록/수정 API로 보낸 JSON을 검사하고, 맞으면 깨끗한 객체(`sourceUrl` 포함)로, 틀리면 `null`을 돌려주는 함수.
 - **`session.ts`**: 로그인 쿠키에 들어갈 서명된 토큰을 만들고 검증. HMAC + Web Crypto API(`crypto.subtle`) 사용 — middleware(Edge 환경)와 API(Node 환경) 양쪽에서 똑같이 동작해야 해서.
 - **`uploadImage.ts`**: 브라우저에서 Blob으로 이미지를 올리는 공통 함수(`uploadImage`)와 사전 검증 함수(`checkImage`).
-- **`rawg.ts`**: `searchRawgGames`(제목 검색, 한글이면 영어로 번역)와 `getRawgGameDetail`(상세 정보 + 스크린샷 + 한국어로 번역된 소개글 + `clip` 트레일러 + `sourceUrl`).
-- **`rawgMapping.ts`**: RAWG 영문 장르/플랫폼 이름을 한글 옵션으로 매핑. `matchRawgPlatforms`는 **여러 플랫폼이 동시에 매칭될 수 있어서** 배열을 돌려주고, 하나만 매칭되면 폼이 자동으로 선택하고 여러 개면 사용자가 버튼으로 직접 고르게 함.
-- **`steam.ts`**: Steam 상점에서 제목으로 검색해 가격/트레일러(mp4/webm 우선, 없으면 `hls_h264`)를 가져옴. 검색 실패/매칭 없음을 `console.error`로 남겨서 서버 로그에서 바로 원인을 확인할 수 있게 함.
+- **`translate.ts`**: 한글 포함 여부 판별(`containsHangul`)과 MyMemory 번역 호출(`translateText`/`translateToEnglish`/`translateToKorean`). 원래 `rawg.ts` 전용이었다가, Steam 검색도 한글 번역이 필요해져서 공용으로 뺌.
+- **`rawg.ts`**: `searchRawgGames`(제목 검색, 한글이면 `translate.ts`로 영어 번역)와 `getRawgGameDetail`(상세 정보 + 스크린샷 + 한국어로 번역된 소개글 + `clip` 트레일러 + `sourceUrl`).
+- **`genreMapping.ts`**: RAWG/Steam 장르 이름을 한글 옵션으로 매핑하는 `matchRawgGenres`(RAWG는 영문 키워드)와 `matchSteamGenres`(Steam은 `l=korean`이라 이미 한글로 오므로 한글 키워드), 그리고 `matchRawgPlatforms`(플랫폼 매핑)까지 셋을 모아둔 파일. 원래 이름은 `rawgMapping.ts`였는데, RAWG 전용이 아니게 되면서 이름을 바꿈. `matchRawgPlatforms`는 **여러 플랫폼이 동시에 매칭될 수 있어서** 배열을 돌려주고, 하나만 매칭되면 폼이 자동으로 선택하고 여러 개면 사용자가 버튼으로 직접 고르게 함.
+- **`steam.ts`**: `findSteamInfo`(제목으로 가격/트레일러/플레이시간 조회, RAWG 선택 경로의 보완용), `searchSteamStore`(제목 검색 — 한글이면 `translate.ts`로 번역 후 검색), `getSteamGameDetail`(appid로 상세 정보 전체 조회), `getOwnedGamesList`(내 Steam 라이브러리 전체 목록). 검색 실패/매칭 없음을 `console.error`로 남겨서 서버 로그에서 바로 원인을 확인할 수 있게 함.
 
 ### `src/components/` — 재사용 화면 부품
 
-- **`GameForm.tsx`**: 등록/수정 공용 폼. RAWG 검색 결과를 고르면 `/api/rawg/[id]`(상세)와 `/api/steam`(가격/트레일러)을 동시에 호출해서 자동으로 채움. 트레일러는 Steam → RAWG `clip` 순서로 폴백. 플랫폼이 여러 개 매칭되면 후보 버튼을 보여줌.
+- **`GameForm.tsx`**: 등록/수정 공용 폼. 등록 모드에서는 RAWG/Steam 검색창이 하나로 합쳐져 있어서, 검색하면 두 API를 동시에 조회해 결과를 한 목록에 섞어 보여줌(Steam 결과가 먼저). 고른 결과의 출처(RAWG/Steam)에 맞는 함수가 자동으로 호출되어 폼을 채움 — RAWG를 고르면 `/api/rawg/[id]`(상세)와 `/api/steam`(가격/트레일러 보완)을 같이, Steam을 고르면 `/api/steam/[appid]`(상세) 하나로 끝남. "내 Steam 라이브러리에서 고르기" 버튼으로 `/api/steam/library`에서 바로 골라 채우는 것도 가능. 새 게임을 고를 때마다 이전 선택으로 채워졌던 트레일러/스크린샷/소개글 등은 먼저 비운 뒤 채움. 트레일러는 Steam → RAWG `clip` 순서로 폴백. 플랫폼이 여러 개 매칭되면 후보 버튼을 보여줌.
 - **`GameFilterForm.tsx`**: 메인 목록의 검색/정렬/상태/플랫폼/장르 필터 폼. 원래 `page.tsx` 안에 있었는데 분리됨. select/checkbox는 바뀌면 바로 제출(`submitOnChange`), 검색어는 Enter로 제출.
 - **`GameCard.tsx`**: 메인 목록 카드. 클릭하면 CD 회전 애니메이션 후 상세 화면으로 이동.
 - **`GameConsoleCard.tsx`**: 상세 화면 왼쪽 "콘솔 화면" 카드. 커버 이미지, 배지, 날짜/플레이 정보에 더해 **트레일러/소개글을 ◀▶ 버튼으로 전환**하는 탭 뷰를 보여줌. 트레일러가 있으면 기본으로 트레일러 탭이 먼저 보임.
@@ -214,7 +222,8 @@ const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 - **`games`, `games/[id]`, `games/[id]/screenshots`**: 등록/수정/삭제, 스크린샷만 갱신.
 - **`upload`**: 업로드 허가 토큰 발급.
 - **`rawg/search`, `rawg/[id]`**: RAWG 검색/상세.
-- **`steam`**: 가격/트레일러 조회.
+- **`steam`**: 제목으로 가격/트레일러 조회 (RAWG 선택 경로의 보완용).
+- **`steam/search`, `steam/[appid]`, `steam/library`**: Steam 검색/상세/내 라이브러리 — 통합 검색창에서 Steam 쪽을 담당.
 
 > `middleware.ts`가 먼저 로그인 검사를 전부 처리하기 때문에, 각 API 라우트 코드 자체에는 로그인 체크 로직이 없습니다.
 
@@ -228,8 +237,9 @@ const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 
 1. 로그인 안 되어 있으면 `/games/new` 접근 시 `middleware.ts`가 `/login`으로 보냄.
 2. `/games/new`에서 `GameForm`이 렌더링됨.
-3. (선택) RAWG 검색 → `/api/rawg/search` → 후보 선택 → `/api/rawg/[id]` + `/api/steam` 동시 호출.
-   - 제목, 장르, 플랫폼(여러 개면 후보로), 출시일, 커버, 소개글(한국어 번역), 메타크리틱, 개발사/퍼블리셔, 스크린샷, 가격, `sourceUrl`을 자동으로 채움.
+3. (선택) 검색창에 제목 입력 → `/api/rawg/search` + `/api/steam/search`를 동시에 호출해 결과를 한 목록에 섞어 보여줌(또는 "내 Steam 라이브러리에서 고르기"로 바로 고름) → 후보 선택.
+   - RAWG를 고르면 `/api/rawg/[id]`(상세) + `/api/steam`(가격/트레일러 보완)을 동시 호출, Steam을 고르면 `/api/steam/[appid]`(상세) 하나로 끝남.
+   - 제목, 장르, 플랫폼(여러 개면 후보로), 출시일, 커버, 소개글(RAWG는 한국어 번역), 메타크리틱, 개발사/퍼블리셔, 스크린샷, 가격, `sourceUrl`을 자동으로 채움.
    - 트레일러는 Steam(mp4/webm → hls_h264) → RAWG `clip` 순으로 하나만 채움.
 4. 스크린샷 선택 → 미리보기만 생성(아직 업로드 안 함).
 5. "등록 완료" 클릭 → `uploadPending()`이 그제서야 Blob에 실제 업로드 → `/api/games`에 `POST`.
@@ -269,3 +279,28 @@ const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 
 - `src/app/page.tsx`에서 `Game` 타입을 쓰면서 import를 빠뜨려서 `tsc` 빌드 에러가 났던 적이 있음 — 리팩터링(필터 폼 분리) 하다가 import 정리를 하면서 실수로 같이 지워진 경우. **교훈**: 컴포넌트를 쪼개거나 옮길 때는 꼭 `npx tsc --noEmit`으로 한 번 전체를 확인.
 - `<input type="data">`처럼 의도한 값("date")과 다른 문자열 오타는 타입 체크를 통과해버리니, 폼 필드처럼 눈으로 확인 가능한 부분은 실제 화면에서 눌러보는 과정이 꼭 필요함.
+
+### 5) Steam 검색이 한글 제목으로는 결과가 0건 (RAWG는 되는데 Steam만 안 되던 문제)
+
+- **증상**: 검색창에 "테라리아"를 치면 RAWG 결과는 뜨는데 Steam 결과만 항상 빔. 영문으로 치면("terraria") 둘 다 정상.
+- **원인 추적**: `/api/steam/search?q=테라리아`를 직접 호출해서 `{"results":[]}`가 돌아오는 걸 확인 → `lib/rawg.ts`의 `searchRawgGames`는 한글이 섞이면 먼저 영어로 번역하고 검색하는데, `lib/steam.ts`의 `searchSteamStore`는 이 단계가 아예 없이 한글 검색어를 그대로 Steam에 보내고 있었음.
+- **원인**: Steam storesearch API가 영문으로 인덱싱된 게임명에 한글 검색어를 매칭해주지 않음(비공식 API라 다국어 매칭을 보장 안 함).
+- **해결**: `rawg.ts`에 있던 `containsHangul`/`translateText`/`translateToEnglish`/`translateToKorean`을 공용 `lib/translate.ts`로 빼고, `searchSteamStore`에서도 검색 전에 한글이면 영어로 번역하도록 함.
+- **배운 점**: 비슷한 두 API 연동 코드를 복붙 없이 따로 짜다 보면, 한쪽에만 있던 보정 로직(여기선 번역)이 다른 쪽엔 누락되기 쉬움. "왜 저쪽은 되는데 이쪽은 안 되지?"라는 질문이 들면 두 코드를 나란히 놓고 비교하는 게 제일 빠름.
+
+### 6) 라우트 정리하다가 실수로 지운 파일 때문에, RAWG로 고른 게임만 Steam 정보가 조용히 비던 문제
+
+- **증상**: Steam 검색/라이브러리로 고른 게임은 가격·트레일러가 잘 채워지는데, **RAWG 검색으로 고른 게임만** 가격이 항상 비어있고 트레일러도 RAWG `clip`만 들어감(Steam 쪽 트레일러가 더 있을 법한 게임인데도).
+- **원인 추적**: 레포 전체에서 "안 쓰는 코드 있는지" 점검하다가 반대 상황을 발견함 — `GameForm.tsx`의 `applyRawgItem`이 `/api/steam?title=...`을 호출하고 있는데, 그 라우트 파일(`src/app/api/steam/route.ts`) 자체가 develop 브랜치에 없었음.
+- **원인**: Steam 검색/상세/라이브러리 라우트(`search/`, `[appid]/`, `library/`)를 새로 추가하면서 "이제 새 라우트들이 있으니 안 써도 되겠지" 하고 예전 `route.ts`를 실수로 같이 지움. 근데 `applyRawgItem`은 여전히 이 라우트(제목 기준 조회)에 의존하고 있었음 — `/api/steam/[appid]`는 appid가 있어야 호출 가능한데, RAWG 결과는 appid를 모르니까 제목으로만 찾는 이 라우트가 따로 필요했던 것.
+- **왜 아무 에러도 안 났는가**: `applyRawgItem`이 Steam 쪽 fetch를 `steamRes.ok ? await steamRes.json() : { result: null }`로 처리해서, 404가 나도 그냥 "Steam 정보 없음"으로 조용히 넘어감. RAWG 정보 자체는 정상적으로 채워지니 폼이 깨진 것처럼 안 보여서 한참 몰랐음.
+- **해결**: 삭제됐던 `src/app/api/steam/route.ts`를 원래 내용 그대로 복구.
+- **배운 점**: API 라우트를 "새 걸로 대체됐다"고 판단하기 전에, 그 라우트를 부르는 **모든** 호출부를 먼저 확인해야 함. 여기선 Steam 상세 조회 경로가 두 가지(appid 기준, 제목 기준)로 나뉘어 있었는데 한쪽만 보고 "이제 필요 없다"고 착각함. 또한 실패를 조용히 삼키는 fallback(`steamRes.ok ? ... : null`)은 UX 입장에서는 안전하지만, 이런 종류의 "라우트가 통째로 사라진" 버그를 한동안 숨기는 부작용도 있다는 걸 체감함.
+
+### 7) Steam으로 고른 게임만 장르가 항상 비던 문제
+
+- **증상**: RAWG 검색으로 고른 게임은 장르 체크박스가 자동으로 선택되는데, Steam 검색/라이브러리로 고른 게임은 장르가 거의 항상 하나도 안 선택됨.
+- **원인 추적**: `GameForm.tsx`의 `applySteamDetail`이 RAWG용 매핑 함수(`matchRawgGenres`)를 그대로 재사용하고 있었음. 그런데 `lib/steam.ts`의 `getSteamGameDetail`은 Steam API를 `l=korean`으로 호출해서 `genres`가 **이미 한글**("액션", "어드벤처" 등)로 옴. `matchRawgGenres`의 키워드 테이블은 전부 **영문**(`action`, `adventure`...)이라서, 소문자로 바꾼 한글 문자열 안에서 영문 키워드를 찾으니 `rpg`처럼 Steam이 영문 그대로 두는 극히 일부만 우연히 걸리고 나머지는 전부 매칭 실패.
+- **해결**: `genreMapping.ts`(당시 이름 `rawgMapping.ts`)에 한글 키워드 기반 `matchSteamGenres`를 새로 추가하고, `applySteamDetail`에서 이걸 쓰도록 변경. 겸사겸사 RAWG 전용이 아니게 된 파일 이름도 `genreMapping.ts`로 바꿈.
+- **배운 점**: 같은 역할(장르 매핑)을 하는 함수라도, 소스마다 **입력 언어/형식이 다르면 그대로 재사용하면 안 됨**. "되는 것처럼 보이는데 결과가 비어있다"는 증상은 로직이 아예 안 도는 게 아니라, 매칭 조건이 안 맞아서 매번 0건으로 끝나는 경우가 많다는 걸 다시 확인함.
+</content>
