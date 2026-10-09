@@ -8,7 +8,7 @@ import type { Game, GameStatus, Screenshot } from '@/types/game';
 import { GENRE_OPTIONS, PLATFORM_OPTIONS } from '@/types/game';
 import BackButton from '@/components/BackButton';
 import { checkImage, uploadImage } from '@/lib/uploadImage';
-import { matchRawgGenres, matchRawgPlatforms } from '@/lib/rawgMapping';
+import { matchRawgGenres, matchRawgPlatforms, matchSteamGenres } from '@/lib/rawgMapping';
 
 // /api/rawg/search 결과 하나
 interface RawgSearchResult {
@@ -207,7 +207,7 @@ export default function GameForm({ game }: { game?: Game }) {
     setTitle(detail.title || fallbackTitle);
     setPlatform('PC');
 
-    const matchedGenres = matchRawgGenres(detail.genreTerms);
+    const matchedGenres = matchSteamGenres(detail.genreTerms);
     if (matchedGenres.length > 0) {
       setGenres((prev) => Array.from(new Set([...prev, ...matchedGenres])));
     }
