@@ -3,6 +3,8 @@
 
 const RAWG_BASE_URL = 'https://api.rawg.io/api';
 
+import { containsHangul, translateToEnglish, translateToKorean } from './translate';
+
 function getApiKey(): string {
   const key = process.env.RAWG_API_KEY;
   if (!key) throw new Error('RAWG_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -31,32 +33,6 @@ export interface RawgSearchResult {
   released?: string | null;
   backgroundImage?: string | null;
   platforms: string[];
-}
-
-// 한글이 섞여 있으면 번역
-function containsHangul(text: string): boolean {
-  return /[\uac00-\ud7a3]/.test(text);
-}
-
-// 키 없이 쓸 수 있는 무료 번역 API
-async function translateText(text: string, langpair: string): Promise<string> {
-  if(!text.trim()) return text;
-  try{
-    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
-    if(!res.ok) return text;
-    const data = await res.json();
-    return data?.responseData?.translatedText || text;
-  } catch {
-    return text; // 번역 API가 죽어도 검색 자체는 계속됨
-  }
-}
-
-function translateToEnglish(text: string): Promise<string> {
-  return translateText(text, 'ko|en');
-}
-
-function translateToKorean(text: string): Promise<string> {
-  return translateText(text, 'en|ko');
 }
 
 // 제목으로 게임을 검색해서 후보 목록을 돌려줌
