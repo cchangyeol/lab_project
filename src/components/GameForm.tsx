@@ -8,7 +8,7 @@ import type { Game, GameStatus, Screenshot } from '@/types/game';
 import { GENRE_OPTIONS, PLATFORM_OPTIONS } from '@/types/game';
 import BackButton from '@/components/BackButton';
 import { checkImage, uploadImage } from '@/lib/uploadImage';
-import { matchRawgGenres, matchRawgPlatforms, matchSteamGenres } from '@/lib/rawgMapping';
+import { matchRawgGenres, matchRawgPlatforms, matchSteamGenres } from '@/lib/genreMapping';
 
 // /api/rawg/search 결과 하나
 interface RawgSearchResult {
