@@ -39,7 +39,40 @@ interface RawgGameDetail {
 interface SteamInfo {
   price: string | null;
   trailerUrl: string | null;
+  playTimeHours: number | null;
 }
+
+interface SteamLibraryGame {
+  appid: number;
+  name: string;
+  playTimeHours: number;
+  iconUrl: string | null;
+  lastPlayedAt: string | null;
+}
+
+interface SteamSearchResult {
+  appid: number;
+  name: string;
+  image: string | null;
+}
+interface SteamGameDetail {
+  title: string;
+  coverImage: string | null;
+  summary: string;
+  genreTerms: string[];
+  developers: string[];
+  publishers: string[];
+  metacritic: number | null;
+  releaseDate: string | null;
+  screenshots: string[];
+  price: string | null;
+  trailerUrl: string | null;
+  sourceUrl: string;
+}
+
+type SearchResult =
+  | ({ source: 'rawg' } & RawgSearchResult)
+  | ({ source: 'steam' } & SteamSearchResult);
 
 const inputClass = 'border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed';
 const sectionTitleClass = 'text-xs font-semibold text-stone-400 uppercase tracking-wide';
@@ -47,6 +80,7 @@ const sectionTitleClass = 'text-xs font-semibold text-stone-400 uppercase tracki
 export default function GameForm({ game }: { game?: Game }) {
   const router = useRouter();
   const isEdit = Boolean(game);
+  const today = new Date().toISOString().slice(0, 10);
 
   // 수정 모드면 기존 값으로, 등록 모드면 빈 값으로 state를 초기화
   const [title, setTitle] = useState(game?.title ?? '');
@@ -74,97 +108,216 @@ export default function GameForm({ game }: { game?: Game }) {
   const [publishers, setPublishers] = useState<string[]>(game?.publishers ?? []);
   const [price, setPrice] = useState(game?.price ?? '');
 
-  // RAWG/Steam 검색 관련 상태 (등록할 때만 사용)
-  const [rawgQuery, setRawgQuery] = useState('');
-  const [rawgResults, setRawgResults] = useState<RawgSearchResult[]>([]);
-  const [rawgSearching, setRawgSearching] = useState(false);
-  const [rawgApplyingId, setRawgApplyingId] = useState<number | null>(null);
-  const [rawgError, setRawgError] = useState('');
   const [rawgPlatformCandidates, setRawgPlatformCandidates] = useState<string[]>([]);
 
-  // "검색" 버튼을 눌렀을 때만 호출됨
-  async function handleRawgSearch() {
-    if (!rawgQuery.trim()) return;
-    setRawgSearching(true);
-    setRawgError('');
-    try {
-      const res = await fetch(`/api/rawg/search?q=${encodeURIComponent(rawgQuery.trim())}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? '검색에 실패했습니다.');
-      setRawgResults(data.results ?? []);
-    } catch (err) {
-      setRawgError((err as Error).message);
-    } finally {
-      setRawgSearching(false);
-    }
-  }
+  const [steamLibrary, setSteamLibrary] = useState<SteamLibraryGame[]>([]);
+  const [steamLibraryOpen, setSteamLibraryOpen] = useState(false);
+  const [steamLibraryLoading, setSteamLibraryLoading] = useState(false);
+  const [steamApplyingAppId, setSteamApplyingAppId] = useState<number | null>(null);
 
-  // 검색 결과 중 하나를 고르면 RAWG 상세 정보 + Steam 가격/트레일러를 같이 받아와 폼에 채움
-  async function applyRawgItem(item: RawgSearchResult) {
-    setRawgApplyingId(item.id);
-    setRawgError('');
-    try {
-      const [detailRes, steamRes] = await Promise.all([
-        fetch(`/api/rawg/${item.id}`),
-        fetch(`/api/steam?title=${encodeURIComponent(item.name)}`),
-      ]);
-
-      const detail: RawgGameDetail = await detailRes.json();
-      if (!detailRes.ok) throw new Error((detail as unknown as { error?: string }).error ?? 'RAWG 상세 정보를 가져오지 못했습니다.');
-
-      const steamData = steamRes.ok ? await steamRes.json() : { result: null };
-      const steamInfo: SteamInfo | null = steamData.result ?? null;
-
-      setTitle(detail.title);
-
-      const matchedPlatforms = matchRawgPlatforms(detail.platforms);
-      setRawgPlatformCandidates(matchedPlatforms);
-      if (matchedPlatforms.length === 1) {
-        setPlatform(matchedPlatforms[0]); // 하나만 매칭도면 기존처럼 자동 선택
-      } // 2개 이상이면 직접 고르게 둠
-
-      const matchedGenres = matchRawgGenres(detail.genreTerms);
-      if (matchedGenres.length > 0) {
-        setGenres((prev) => Array.from(new Set([...prev, ...matchedGenres])));
-      }
-
-      if (detail.released) setReleaseDate(detail.released);
-      if (detail.coverImage) setCoverImage(detail.coverImage);
-      if (detail.summary) setSummary(detail.summary);
-      if (detail.sourceUrl) setSourceUrl(detail.sourceUrl);
-      if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
-      if (detail.developers.length > 0) setDevelopers(detail.developers);
-      if (detail.publishers.length > 0) setPublishers(detail.publishers);
-
-      if (detail.screenshots.length > 0) {
-        const remaining = 24 - screenshots.length;
-        if (remaining > 0) {
-          const added = detail.screenshots.slice(0, remaining).map((url) => ({ url }));
-          setScreenshot((prev) => [...prev, ...added]);
-        }
-      }
-      if (steamInfo?.price) setPrice(steamInfo.price);
-
-      const trailerUrl = steamInfo?.trailerUrl ?? detail.trailerUrl ?? null;
-      if (trailerUrl) {
-        setTrailerUrls((prev) => {
-          const filled = prev.filter((u) => u.trim() !== '');
-          if (filled.includes(trailerUrl) || filled.length >= 3) return prev;
-          return [...filled, trailerUrl];
-        });
-      }
-
-      setRawgResults([]);
-      setRawgQuery('');
-    } catch (err) {
-      setRawgError((err as Error).message);
-    } finally {
-      setRawgApplyingId(null);
-    }
-  }
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [applyingKey, setApplyingKey] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState('');
 
   function toggleGenre(g: string) {
     setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
+  }
+
+  // 검색으로 새 게임을 고를 때, 이전 선택으로 채워졌던 값들을 먼저 비움
+  // (스크린샷 중 blob:으로 시작하는 건 사용자가 직접 올린 거라 안 지움)
+  function resetFetchedInfo() {
+    setCoverImage('');
+    setSummary('');
+    setSourceUrl('');
+    setMetacritic(undefined);
+    setDevelopers([]);
+    setPublishers([]);
+    setPrice('');
+    setTrailerUrls(['']);
+    setScreenshot((prev) => prev.filter((s) => s.url.startsWith('blob:')));
+    setRawgPlatformCandidates([]);
+  }
+
+  // 고른 RAWG 결과를 폼에 채움 (성공/실패 처리는 호출하는 쪽에서)
+  async function applyRawgItem(item: RawgSearchResult) {
+    const [detailRes, steamRes] = await Promise.all([
+      fetch(`/api/rawg/${item.id}`),
+      fetch(`/api/steam?title=${encodeURIComponent(item.name)}`),
+    ]);
+
+    const detail: RawgGameDetail = await detailRes.json();
+    if (!detailRes.ok) throw new Error((detail as unknown as { error?: string }).error ?? 'RAWG 상세 정보를 가져오지 못했습니다.');
+
+    const steamData = steamRes.ok ? await steamRes.json() : { result: null };
+    const steamInfo: SteamInfo | null = steamData.result ?? null;
+
+    setTitle(detail.title);
+
+    const matchedPlatforms = matchRawgPlatforms(detail.platforms);
+    setRawgPlatformCandidates(matchedPlatforms);
+    if (matchedPlatforms.length === 1) {
+      setPlatform(matchedPlatforms[0]);
+    }
+
+    const matchedGenres = matchRawgGenres(detail.genreTerms);
+    if (matchedGenres.length > 0) {
+      setGenres((prev) => Array.from(new Set([...prev, ...matchedGenres])));
+    }
+
+    if (detail.released) setReleaseDate(detail.released);
+    if (detail.coverImage) setCoverImage(detail.coverImage);
+    if (detail.summary) setSummary(detail.summary);
+    if (detail.sourceUrl) setSourceUrl(detail.sourceUrl);
+    if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
+    if (detail.developers.length > 0) setDevelopers(detail.developers);
+    if (detail.publishers.length > 0) setPublishers(detail.publishers);
+
+    if (detail.screenshots.length > 0) {
+      const remaining = 24 - screenshots.length;
+      if (remaining > 0) {
+        const added = detail.screenshots.slice(0, remaining).map((url) => ({ url }));
+        setScreenshot((prev) => [...prev, ...added]);
+      }
+    }
+    if (steamInfo?.price) setPrice(steamInfo.price);
+
+    const trailerUrl = steamInfo?.trailerUrl ?? detail.trailerUrl ?? null;
+    if (trailerUrl) {
+      setTrailerUrls((prev) => {
+        const filled = prev.filter((u) => u.trim() !== '');
+        if (filled.includes(trailerUrl) || filled.length >= 3) return prev;
+        return [...filled, trailerUrl];
+      });
+    }
+
+    if (typeof steamInfo?.playTimeHours === 'number') {
+      setPlayTime(String(steamInfo.playTimeHours));
+    }
+  }
+
+  // Steam appid 하나로 상세 정보를 가져와 폼에 채우는 공통 로직
+  // (Steam 검색에서 고르든, 내 라이브러리에서 고르든 여기서 끝남)
+  async function applySteamDetail(appid: number, fallbackTitle: string) {
+    const res = await fetch(`/api/steam/${appid}`);
+    const detail: SteamGameDetail = await res.json();
+    if (!res.ok) throw new Error((detail as unknown as { error?: string }).error ?? 'Steam 상세 정보를 가져오지 못했습니다.');
+
+    setTitle(detail.title || fallbackTitle);
+    setPlatform('PC');
+
+    const matchedGenres = matchRawgGenres(detail.genreTerms);
+    if (matchedGenres.length > 0) {
+      setGenres((prev) => Array.from(new Set([...prev, ...matchedGenres])));
+    }
+
+    if (detail.releaseDate) setReleaseDate(detail.releaseDate);
+    if (detail.coverImage) setCoverImage(detail.coverImage);
+    if (detail.summary) setSummary(detail.summary);
+    setSourceUrl(detail.sourceUrl);
+    if (typeof detail.metacritic === 'number') setMetacritic(detail.metacritic);
+    if (detail.developers.length > 0) setDevelopers(detail.developers);
+    if (detail.publishers.length > 0) setPublishers(detail.publishers);
+    if (detail.price) setPrice(detail.price);
+
+    if (detail.trailerUrl) {
+      const trailerUrl = detail.trailerUrl;
+      setTrailerUrls((prev) => {
+        const filled = prev.filter((u) => u.trim() !== '');
+        if (filled.includes(trailerUrl) || filled.length >= 3) return prev;
+        return [...filled, trailerUrl];
+      });
+    }
+
+    if (detail.screenshots.length > 0) {
+      const remaining = 24 - screenshots.length;
+      if (remaining > 0) {
+        const added = detail.screenshots.slice(0, remaining).map((url) => ({ url }));
+        setScreenshot((prev) => [...prev, ...added]);
+      }
+    }
+  }
+
+  // 검색창 하나로 RAWG + Steam 동시 검색
+  async function handleSearch() {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchError('');
+    try {
+      const q = searchQuery.trim();
+      const [rawgRes, steamRes] = await Promise.all([
+        fetch(`/api/rawg/search?q=${encodeURIComponent(q)}`),
+        fetch(`/api/steam/search?q=${encodeURIComponent(q)}`),
+      ]);
+      const rawgData = rawgRes.ok ? await rawgRes.json() : { results: [] };
+      const steamData = steamRes.ok ? await steamRes.json() : { results: [] };
+
+      const rawgItems: SearchResult[] = (rawgData.results ?? []).map((r: RawgSearchResult) => ({ source: 'rawg' as const, ...r }));
+      const steamItems: SearchResult[] = (steamData.results ?? []).map((r: SteamSearchResult) => ({ source: 'steam' as const, ...r }));
+
+      setSearchResults([...steamItems, ...rawgItems]);
+    } catch (err) {
+      setSearchError((err as Error).message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  // 통합 검색 결과 중 하나를 고르면 출처에 맞는 함수로 폼을 채움
+  async function applySearchResult(item: SearchResult) {
+    const key = item.source === 'rawg' ? `rawg-${item.id}` : `steam-${item.appid}`;
+    setApplyingKey(key);
+    setSearchError('');
+    resetFetchedInfo();
+    try {
+      if (item.source === 'rawg') {
+        await applyRawgItem(item);
+      } else {
+        await applySteamDetail(item.appid, item.name);
+      }
+      setSearchResults([]);
+      setSearchQuery('');
+    } catch (err) {
+      setSearchError((err as Error).message);
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
+  // Steam 라이브러리 목록을 불러옴 (이미 불러왔으면 토글만)
+  async function loadSteamLibrary() {
+    if (steamLibrary.length > 0) {
+      setSteamLibraryOpen((prev) => !prev);
+      return;
+    }
+    setSteamLibraryLoading(true);
+    try {
+      const res = await fetch('/api/steam/library');
+      const data = await res.json();
+      setSteamLibrary(data.games ?? []);
+      setSteamLibraryOpen(true);
+    } finally {
+      setSteamLibraryLoading(false);
+    }
+  }
+
+  // 라이브러리에서 게임을 고르면, 이미 알고 있는 appid로 Steam 상세를 바로 가져와 적용
+  // (장르 · 플랫폼 · 커버 · 소개글 · 가격 · 트레일러는 Steam이, 플레이 시간 · 마지막 플레이는 라이브러리 데이터가 채움)
+  async function applySteamLibraryItem(game: SteamLibraryGame) {
+    setSteamApplyingAppId(game.appid);
+    setSearchError('');
+    resetFetchedInfo();
+    try {
+      await applySteamDetail(game.appid, game.name);
+      setPlayTime(String(game.playTimeHours));
+      if (game.lastPlayedAt) setEndDate(game.lastPlayedAt);
+    } catch (err) {
+      setSearchError((err as Error).message);
+    } finally {
+      setSteamApplyingAppId(null);
+      setSteamLibraryOpen(false);
+    }
   }
 
   // 파일을 고르면 바로 올리지 않고 미리보기(blob: 주소)만 만들어 둠
@@ -249,9 +402,17 @@ export default function GameForm({ game }: { game?: Game }) {
       return;
     }
 
-    // 마지막 플레이한 날이 시작일보다 빠르면 저장하지 않고 알림만 띄움
-    if (endDate && endDate < startDate) {
-      alert('적절한 날짜를 선택해주세요.');
+    // 날짜 유효성 검사: 미래 날짜거나, 마지막 플레이가 시작일보다 빠르면 저장 안 함
+    if (startDate && startDate > today) {
+      alert('시작일은 오늘보다 미래일 수 없습니다.');
+      return;
+    }
+    if (endDate && endDate > today) {
+      alert('마지막 플레이 날짜는 오늘보다 미래일 수 없습니다.');
+      return;
+    }
+    if (startDate && endDate && endDate < startDate) {
+      alert('마지막 플레이 날짜가 시작일보다 빠를 수 없습니다.');
       return;
     }
 
@@ -322,68 +483,108 @@ export default function GameForm({ game }: { game?: Game }) {
 
           {!isEdit && (
             <div className="flex flex-col gap-2 border-b border-stone-100 pb-5">
-              <h2 className={sectionTitleClass}>RAWG/Steam 정보로 채우기 (선택)</h2>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="게임명으로 검색"
-                  value={rawgQuery}
-                  onChange={(e) => setRawgQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleRawgSearch(); } }}
-                  className={`${inputClass} flex-1 text-stone-800`}
-                />
-                <button
-                  type="button"
-                  onClick={handleRawgSearch}
-                  disabled={rawgSearching}
-                  className="bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg px-4 text-sm font-medium transition disabled:opacity-50"
-                >
-                  {rawgSearching ? '검색 중...' : '검색'}
-                </button>
-              </div>
-              {rawgError && <p className="text-xs text-rose-500">{rawgError}</p>}
-              {rawgResults.length > 0 && (
-                <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
-                  {rawgResults.map((item) => (
+            <h2 className={sectionTitleClass}>RAWG/Steam 정보로 채우기 (선택)</h2>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="게임명으로 검색"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }}
+                className={`${inputClass} flex-1 text-stone-800`}
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={searching}
+                className="bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg px-4 text-sm font-medium transition disabled:opacity-50"
+              >
+                {searching ? '검색 중...' : '검색'}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadSteamLibrary}
+              disabled={steamLibraryLoading}
+              className="self-start text-sky-600 text-sm underline disabled:opacity-50"
+            >
+              {steamLibraryLoading ? '불러오는 중...' : '내 Steam 라이브러리에서 고르기'}
+            </button>
+
+            {searchError && <p className="text-xs text-rose-500">{searchError}</p>}
+            {searchResults.length > 0 && (
+              <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
+                {searchResults.map((item) => {
+                  const key = item.source === 'rawg' ? `rawg-${item.id}` : `steam-${item.appid}`;
+                  const image = item.source === 'rawg' ? item.backgroundImage : item.image;
+                  return (
                     <button
                       type="button"
-                      key={item.id}
-                      onClick={() => applyRawgItem(item)}
-                      disabled={rawgApplyingId !== null}
+                      key={key}
+                      onClick={() => applySearchResult(item)}
+                      disabled={applyingKey !== null}
                       className="flex items-center gap-3 text-left border border-stone-200 rounded-lg p-2 text-xs hover:bg-sky-50 transition disabled:opacity-50"
                     >
-                      {item.backgroundImage && (
-                        <img src={item.backgroundImage} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
-                      )}
+                      {image && <img src={image} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />}
                       <div className="flex-1">
                         <div className="font-semibold text-stone-800">{item.name}</div>
-                        <div className="text-stone-500">
-                          {item.released ?? '출시일 미상'} · {item.platforms.join(', ') || '플랫폼 미상'}
+                        <div className="text-stone-500 flex items-center gap-1.5 mt-0.5">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${item.source === 'rawg' ? 'bg-sky-100 text-sky-700' : 'bg-stone-800 text-white'}`}>
+                            {item.source === 'rawg' ? 'RAWG' : 'Steam'}
+                          </span>
+                          {item.source === 'rawg' && <span>{item.released ?? '출시일 미상'}</span>}
                         </div>
                       </div>
-                      {rawgApplyingId === item.id && <span className="text-stone-400">불러오는 중...</span>}
+                      {applyingKey === key && <span className="text-stone-400">불러오는 중...</span>}
                     </button>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+            )}
 
-              {coverImage && (
-                <div className="flex gap-3 items-start border border-stone-200 rounded-lg p-3">
-                  <img src={coverImage} alt="" className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />
-                  <div className="text-xs text-stone-500 flex flex-col gap-0.5">
-                    <div className="flex gap-2">
-                      {releaseDate && <span>출시일 {releaseDate}</span>}
-                      {metacritic !== undefined && <span>메타크리틱 {metacritic}</span>}
-                      {price && <span>{price}</span>}
-                    </div>
-                    {(developers.length > 0 || publishers.length > 0) && (
-                      <span>{[...developers, ...publishers].join(' · ')}</span>
-                    )}
-                    {summary && <p className="text-stone-400 line-clamp-3">{summary}</p>}
+            {steamLibraryOpen && (
+              <div className="flex flex-col gap-2 max-h-56 overflow-y-auto border border-stone-200 rounded-lg p-2">
+                {steamLibrary.length === 0 ? (
+                  <p className="text-xs text-stone-400 p-2">라이브러리가 비어있거나 비공개 설정입니다.</p>
+                ) : (
+                  steamLibrary.map((game) => (
+                    <button
+                      type="button"
+                      key={game.appid}
+                      onClick={() => applySteamLibraryItem(game)}
+                      disabled={steamApplyingAppId !== null}
+                      className="flex items-center gap-3 text-left border border-stone-200 rounded-lg p-2 text-xs hover:bg-sky-50 transition disabled:opacity-50"
+                    >
+                      {game.iconUrl && <img src={game.iconUrl} alt="" className="w-8 h-8 rounded flex-shrink-0" />}
+                      <div className="flex-1">
+                        <div className="font-semibold text-stone-800">{game.name}</div>
+                        <div className="text-stone-500">{game.playTimeHours}시간 플레이</div>
+                      </div>
+                      {steamApplyingAppId === game.appid && <span className="text-stone-400">적용 중...</span>}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            {coverImage && (
+              <div className="flex gap-3 items-start border border-stone-200 rounded-lg p-3">
+                <img src={coverImage} alt="" className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />
+                <div className="text-xs text-stone-500 flex flex-col gap-0.5">
+                  <div className="flex gap-2">
+                    {releaseDate && <span>출시일 {releaseDate}</span>}
+                    {metacritic !== undefined && <span>메타크리틱 {metacritic}</span>}
+                    {price && <span>{price}</span>}
                   </div>
+                  {(developers.length > 0 || publishers.length > 0) && (
+                    <span>{[...developers, ...publishers].join(' · ')}</span>
+                  )}
+                  {summary && <p className="text-stone-400 line-clamp-3">{summary}</p>}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
           )}
 
           <div className="flex flex-col gap-3">
@@ -480,20 +681,35 @@ export default function GameForm({ game }: { game?: Game }) {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   disabled={status === '하고싶음'}
-                  required={status !== '하고싶음'}
+                  max={today}
                 />
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-stone-600">
                 마지막 플레이 (선택)
-                <input type="date" className={inputClass} min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={status === '하고싶음'} />
+                <input
+                  type="date"
+                  className={inputClass}
+                  min={startDate}
+                  max={today}
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  disabled={status === '하고싶음'}
+                />
               </label>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-sm text-stone-600">
                 플레이 시간 (시간)
-                <input type="number" min={0} className={inputClass} value={playTime} onChange={(e) => setPlayTime(e.target.value)} disabled={status === '하고싶음'} required={status !== '하고싶음'} />
+                <input type="number"
+                  min={0}
+                  className={inputClass}
+                  value={playTime}
+                  onChange={(e) => setPlayTime(e.target.value)}
+                  disabled={status === '하고싶음'}
+                  required={status !== '하고싶음'}
+                />
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-stone-600">
@@ -509,7 +725,6 @@ export default function GameForm({ game }: { game?: Game }) {
                     setRating(value === '' ? 0 : Math.min(5, Math.max(1, Number(value))));
                   }}
                   disabled={status === '하고싶음'}
-                  required={status !== '하고싶음'}
                 />
               </label>
             </div>
