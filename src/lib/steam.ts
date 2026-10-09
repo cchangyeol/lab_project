@@ -3,6 +3,8 @@
 const STEAM_SEARCH_URL = 'https://store.steampowered.com/api/storesearch';
 const STEAM_DETAILS_URL = 'https://store.steampowered.com/api/appdetails';
 
+import { containsHangul, translateToEnglish } from './translate';
+
 interface SteamSearchItem {
   id: number;
 }
@@ -154,7 +156,8 @@ export async function getOwnedGamesList(): Promise<SteamLibraryGame[]> {
 
   // 제목으로 Steam 상점 검색 결과 전체 목록을 돌려줌 (RAWG search와 같은 용도)
 export async function searchSteamStore(query: string): Promise<SteamSearchResult[]> {
-  const url = `${STEAM_SEARCH_URL}?term=${encodeURIComponent(query)}&l=korean&cc=kr`;
+  const searchQuery = containsHangul (query) ? await translateToEnglish(query) : query;
+  const url = `${STEAM_SEARCH_URL}?term=${encodeURIComponent(searchQuery)}&l=korean&cc=kr`;
   const res = await fetch(url);
   if (!res.ok) return [];
 
