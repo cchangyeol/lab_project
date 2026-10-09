@@ -80,6 +80,7 @@ MySQL 같은 "관계형 DB"는 미리 테이블과 칼럼을 딱 정해놓고 �
 - **직접 겪은 일**: Steam이 트레일러 영상 주소를 주는 형식을 바꿨습니다. 예전엔 `movies[0].mp4.max` / `webm.max`로 직접 재생 가능한 mp4/webm 링크를 줬는데, 지금은 `hls_h264`(HLS 스트리밍, `.m3u8`) 위주로 줍니다. `.m3u8`은 `<video src=...>` 태그로 바로 재생이 안 되고(사파리는 네이티브로 되지만 크롬/파이어폭스는 안 됨), 그래서 `hls.js` 라이브러리로 재생하는 `HlsVideo.tsx` 컴포넌트를 추가했습니다. **교훈**: 공식 문서가 없는 비공식 API는 사전 통보 없이 응답 형식이 바뀔 수 있다는 걸 실제로 겪었습니다. 터미널 로그에 실제 응답을 찍어보는(`console.error`) 방식으로 원인을 찾았습니다.
 - **트레일러를 찾는 순서**: ① Steam의 mp4/webm(있으면) → ② Steam의 `hls_h264` → ③ RAWG의 `clip`. 셋 다 없으면(대부분 콘솔 독점작) 트레일러 없이 저장됩니다. Steam 자체에 게임이 없는 경우(검색 결과 0건)는 버그가 아니라 정상 동작입니다 — 예를 들어 닌텐도 스위치 독점작은 애초에 Steam 상점에 없습니다.
 - **검색어에 한글이 섞여 있으면**(예: "테라리아") RAWG와 마찬가지로 먼저 영어로 번역한 뒤(`lib/translate.ts`) Steam에 검색을 보냅니다. Steam storesearch API는 영문 게임명에 한글 검색어를 매칭해주지 않아서, 번역 없이 그대로 보내면 결과가 0건으로 조용히 비어버립니다 (자세한 건 6절 트러블슈팅 참고).
+- **장르도 RAWG랑 Steam이 서로 다른 모양으로 옴**: Steam appdetails를 `l=korean`으로 호출하면 장르 이름이 이미 한글("액션", "어드벤처" 등)로 와서, RAWG용 영문 키워드 매핑과는 별개의 매핑 함수(`matchSteamGenres`)가 필요합니다 (6절 트러블슈팅 참고).
 
 ### MyMemory 번역 API
 
@@ -114,7 +115,7 @@ lab_project/
    │  ├─ uploadImage.ts
    │  ├─ translate.ts           # 한글 감지 + 번역 (RAWG/Steam 검색 공용)
    │  ├─ rawg.ts                # 검색 + 상세(clip, sourceUrl 포함)
-   │  ├─ rawgMapping.ts         # 장르/플랫폼 매칭 (플랫폼은 여러 개 매칭 가능)
+   │  ├─ genreMapping.ts        # RAWG/Steam 장르 매칭 + 플랫폼 매칭 (플랫폼은 여러 개 매칭 가능)
    │  └─ steam.ts               # 검색 + 상세 + 라이브러리 + 가격/트레일러(mp4/webm/hls_h264)
    ├─ components/               # 재사용 가능한 화면 부품
    │  ├─ GameForm.tsx
@@ -192,7 +193,7 @@ const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 - **`uploadImage.ts`**: 브라우저에서 Blob으로 이미지를 올리는 공통 함수(`uploadImage`)와 사전 검증 함수(`checkImage`).
 - **`translate.ts`**: 한글 포함 여부 판별(`containsHangul`)과 MyMemory 번역 호출(`translateText`/`translateToEnglish`/`translateToKorean`). 원래 `rawg.ts` 전용이었다가, Steam 검색도 한글 번역이 필요해져서 공용으로 뺌.
 - **`rawg.ts`**: `searchRawgGames`(제목 검색, 한글이면 `translate.ts`로 영어 번역)와 `getRawgGameDetail`(상세 정보 + 스크린샷 + 한국어로 번역된 소개글 + `clip` 트레일러 + `sourceUrl`).
-- **`rawgMapping.ts`**: RAWG 영문 장르/플랫폼 이름을 한글 옵션으로 매핑. `matchRawgPlatforms`는 **여러 플랫폼이 동시에 매칭될 수 있어서** 배열을 돌려주고, 하나만 매칭되면 폼이 자동으로 선택하고 여러 개면 사용자가 버튼으로 직접 고르게 함.
+- **`genreMapping.ts`**: RAWG/Steam 장르 이름을 한글 옵션으로 매핑하는 `matchRawgGenres`(RAWG는 영문 키워드)와 `matchSteamGenres`(Steam은 `l=korean`이라 이미 한글로 오므로 한글 키워드), 그리고 `matchRawgPlatforms`(플랫폼 매핑)까지 셋을 모아둔 파일. 원래 이름은 `rawgMapping.ts`였는데, RAWG 전용이 아니게 되면서 이름을 바꿈. `matchRawgPlatforms`는 **여러 플랫폼이 동시에 매칭될 수 있어서** 배열을 돌려주고, 하나만 매칭되면 폼이 자동으로 선택하고 여러 개면 사용자가 버튼으로 직접 고르게 함.
 - **`steam.ts`**: `findSteamInfo`(제목으로 가격/트레일러/플레이시간 조회, RAWG 선택 경로의 보완용), `searchSteamStore`(제목 검색 — 한글이면 `translate.ts`로 번역 후 검색), `getSteamGameDetail`(appid로 상세 정보 전체 조회), `getOwnedGamesList`(내 Steam 라이브러리 전체 목록). 검색 실패/매칭 없음을 `console.error`로 남겨서 서버 로그에서 바로 원인을 확인할 수 있게 함.
 
 ### `src/components/` — 재사용 화면 부품
@@ -295,4 +296,11 @@ const PUBLIC_PATHS = new Set(['/login', '/api/auth/login', '/api/auth/logout']);
 - **왜 아무 에러도 안 났는가**: `applyRawgItem`이 Steam 쪽 fetch를 `steamRes.ok ? await steamRes.json() : { result: null }`로 처리해서, 404가 나도 그냥 "Steam 정보 없음"으로 조용히 넘어감. RAWG 정보 자체는 정상적으로 채워지니 폼이 깨진 것처럼 안 보여서 한참 몰랐음.
 - **해결**: 삭제됐던 `src/app/api/steam/route.ts`를 원래 내용 그대로 복구.
 - **배운 점**: API 라우트를 "새 걸로 대체됐다"고 판단하기 전에, 그 라우트를 부르는 **모든** 호출부를 먼저 확인해야 함. 여기선 Steam 상세 조회 경로가 두 가지(appid 기준, 제목 기준)로 나뉘어 있었는데 한쪽만 보고 "이제 필요 없다"고 착각함. 또한 실패를 조용히 삼키는 fallback(`steamRes.ok ? ... : null`)은 UX 입장에서는 안전하지만, 이런 종류의 "라우트가 통째로 사라진" 버그를 한동안 숨기는 부작용도 있다는 걸 체감함.
+
+### 7) Steam으로 고른 게임만 장르가 항상 비던 문제
+
+- **증상**: RAWG 검색으로 고른 게임은 장르 체크박스가 자동으로 선택되는데, Steam 검색/라이브러리로 고른 게임은 장르가 거의 항상 하나도 안 선택됨.
+- **원인 추적**: `GameForm.tsx`의 `applySteamDetail`이 RAWG용 매핑 함수(`matchRawgGenres`)를 그대로 재사용하고 있었음. 그런데 `lib/steam.ts`의 `getSteamGameDetail`은 Steam API를 `l=korean`으로 호출해서 `genres`가 **이미 한글**("액션", "어드벤처" 등)로 옴. `matchRawgGenres`의 키워드 테이블은 전부 **영문**(`action`, `adventure`...)이라서, 소문자로 바꾼 한글 문자열 안에서 영문 키워드를 찾으니 `rpg`처럼 Steam이 영문 그대로 두는 극히 일부만 우연히 걸리고 나머지는 전부 매칭 실패.
+- **해결**: `genreMapping.ts`(당시 이름 `rawgMapping.ts`)에 한글 키워드 기반 `matchSteamGenres`를 새로 추가하고, `applySteamDetail`에서 이걸 쓰도록 변경. 겸사겸사 RAWG 전용이 아니게 된 파일 이름도 `genreMapping.ts`로 바꿈.
+- **배운 점**: 같은 역할(장르 매핑)을 하는 함수라도, 소스마다 **입력 언어/형식이 다르면 그대로 재사용하면 안 됨**. "되는 것처럼 보이는데 결과가 비어있다"는 증상은 로직이 아예 안 도는 게 아니라, 매칭 조건이 안 맞아서 매번 0건으로 끝나는 경우가 많다는 걸 다시 확인함.
 </content>
