@@ -52,7 +52,7 @@ interface SteamOwnedGame {
 }
 
 interface SteamOwnedGamesResponse{
-  response?: { game?: SteamOwnedGame[] };
+  response?: { games?: SteamOwnedGame[] };
 }
 
 async function getSteamPlaytimeHours(appid: number): Promise<number | null> {
@@ -65,7 +65,7 @@ async function getSteamPlaytimeHours(appid: number): Promise<number | null> {
   if (!res.ok) return null;
 
   const data = (await res.json()) as SteamOwnedGamesResponse;
-  const game = data.response?.game?.find((g) => g.appid === appid);
+  const game = data.response?.games?.find((g) => g.appid === appid);
   if (!game) return null;
 
   return Math.round(game.playtime_forever / 60); // 분 -> 시간
